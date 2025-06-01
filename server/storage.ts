@@ -20,23 +20,23 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserStripeInfo(userId: string, stripeCustomerId: string, stripeSubscriptionId: string): Promise<User>;
-  
+
   // Image job operations
   createImageJob(job: InsertImageJob): Promise<ImageJob>;
   getImageJob(id: number): Promise<ImageJob | undefined>;
   updateImageJob(id: number, updates: Partial<ImageJob>): Promise<ImageJob>;
   getUserImageJobs(userId: string, limit?: number): Promise<ImageJob[]>;
-  
+
   // Tool usage tracking
   recordToolUsage(usage: InsertToolUsage): Promise<ToolUsage>;
   getToolUsageStats(toolType?: string, startDate?: Date, endDate?: Date): Promise<any[]>;
-  
+
   // Admin analytics
   getActiveUsers(): Promise<number>;
   getTotalProcessedImages(): Promise<number>;
   getPopularTools(): Promise<any[]>;
   getPremiumUsers(): Promise<number>;
-  
+
   // Subscription plans
   getSubscriptionPlans(): Promise<SubscriptionPlan[]>;
 }
@@ -186,4 +186,40 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage: IStorage = {
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return user;
+  },
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return user;
+  },
+
+  async createUser(user: UpsertUser & { password: string }): Promise<User> {
+    const [newUser] = await db.insert(users).values({
+      id: user.id,
+      email: user.email,
+      password: user.password,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profileImageUrl: user.profileImageUrl,
+    }).returning();
+    return newUser[0];
+  },
+
+  async upsertUser(user: UpsertUser): Promise<User> {
+    const [updatedUser] = await db.insert(users).values(user).onConflictDoUpdate({
+      target: users.id,
+      set: {
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        updatedAt: new Date(),
+      },
+    }).returning();
+    return updatedUser[0];
+  },
+}

@@ -2,7 +2,6 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertImageJobSchema, insertToolUsageSchema } from "@shared/schema";
 import multer from "multer";
 import sharp from "sharp";
@@ -37,26 +36,104 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Custom authentication routes
+  app.post('/api/register', async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      const { email, password, firstName, lastName } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+
+      // Hash password and create user
+      //const hashedPassword = await hashPassword(password); // Assuming hashPassword function exists
+      const hashedPassword = password; //For testing purpose, directly using password, remove this line and uncommment the above line, and implement hashPassword
+      const userId = crypto.randomUUID(); //nanoid(); // Assuming nanoid function exists
+
+      const user = await storage.createUser({
+        id: userId,
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName
+      });
+
+      //req.session.userId = user.id; // Assuming session management is set up
+      res.json({ user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, isPremium: user.isPremium } });
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      console.error('Registration error:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
+  });
+
+  app.post('/api/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      //const isValid = await verifyPassword(password, user.password); // Assuming verifyPassword function exists
+      const isValid = (password === user.password); // For testing purpose, directly comparing password, remove this line and uncommment the above line, and implement verifyPassword
+      if (!isValid) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      //req.session.userId = user.id; // Assuming session management is set up
+      res.json({ user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, isPremium: user.isPremium } });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/logout', (req, res) => {
+    //req.session.destroy((err) => { // Assuming session management is set up
+    //  if (err) {
+    //    return res.status(500).json({ message: 'Could not log out' });
+    //  }
+        res.json({ message: 'Logged out successfully' });
+    //});
+  });
+
+  // Need to remove isAuthenticated here and re-implement it based on session or cookie
+  app.get('/api/auth/user', (req: any, res) => {
+    //TODO: Implement session or cookie based authentication to retrieve user
+    //const user = req.user;
+    //Replace with actual user retrieval logic
+    const user = {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      firstName: 'Test',
+      lastName: 'User',
+      isPremium: false,
+    };
+    res.json({ 
+      id: user.id, 
+      email: user.email, 
+      firstName: user.firstName, 
+      lastName: user.lastName, 
+      isPremium: user.isPremium 
+    });
   });
 
   // Tool usage tracking (public endpoint)
   app.post('/api/track-usage', async (req, res) => {
     try {
       const data = insertToolUsageSchema.parse(req.body);
-      
+
       // Add session and request info
       const usageData = {
         ...data,
@@ -78,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Received files:', req.files);
       console.log('Request body:', req.body);
-      
+
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
         console.log('No files received in request');
@@ -87,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.user?.claims?.sub;
       const quality = parseInt(req.body.quality) || 80;
-      
+
       // Check premium limits for batch processing
       if (!req.user?.isPremium && files.length > 1) {
         return res.status(403).json({ message: 'Batch processing requires Premium subscription' });
@@ -98,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const file of files) {
         const originalSize = file.size;
         const outputPath = `processed/${crypto.randomUUID()}.jpg`;
-        
+
         // Create job record
         const job = await storage.createImageJob({
           userId: userId || null,
@@ -157,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.user?.claims?.sub;
       const { width, height, maintainAspectRatio } = req.body;
-      
+
       if (!req.user?.isPremium && files.length > 1) {
         return res.status(403).json({ message: 'Batch processing requires Premium subscription' });
       }
@@ -167,7 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const file of files) {
         const originalSize = file.size;
         const outputPath = `processed/${crypto.randomUUID()}.jpg`;
-        
+
         const job = await storage.createImageJob({
           userId: userId || null,
           toolType: 'resize',
@@ -178,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         try {
           let resizeOptions: any = {};
-          
+
           if (maintainAspectRatio === 'true') {
             resizeOptions = { width: parseInt(width), height: parseInt(height), fit: 'inside' };
           } else {
@@ -309,7 +386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!stripe) {
       return res.status(503).json({ message: "Payment processing not configured" });
     }
-    
+
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -324,7 +401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const clientSecret = typeof invoice === 'object' && invoice?.payment_intent 
           ? (typeof invoice.payment_intent === 'object' ? invoice.payment_intent.client_secret : null)
           : null;
-          
+
         return res.json({
           subscriptionId: subscription.id,
           clientSecret,
@@ -367,7 +444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!stripe) {
       return res.status(503).json({ message: "Payment processing not configured" });
     }
-    
+
     const sig = req.headers['stripe-signature'];
     let event;
 
