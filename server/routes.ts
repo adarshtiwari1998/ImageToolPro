@@ -22,9 +22,12 @@ if (process.env.STRIPE_SECRET_KEY) {
 // Configure multer for file uploads
 const upload = multer({
   dest: 'uploads/',
-  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit
+  limits: { 
+    fileSize: 15 * 1024 * 1024, // 15MB limit
+    files: 40 // Max 40 files
+  },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -73,8 +76,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Image processing endpoints
   app.post('/api/compress-image', upload.array('images', 40), async (req, res) => {
     try {
+      console.log('Received files:', req.files);
+      console.log('Request body:', req.body);
+      
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
+        console.log('No files received in request');
         return res.status(400).json({ message: 'No files uploaded' });
       }
 

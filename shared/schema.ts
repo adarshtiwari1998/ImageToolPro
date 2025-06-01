@@ -79,6 +79,61 @@ export const subscriptionPlans = pgTable("subscription_plans", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// File upload sessions - tracks user upload sessions
+export const uploadSessions = pgTable("upload_sessions", {
+  id: varchar("id").primaryKey(), // unique session ID like iLoveImg
+  userId: varchar("user_id").references(() => users.id),
+  sessionToken: varchar("session_token").notNull().unique(),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// File uploads - individual files in a session
+export const fileUploads = pgTable("file_uploads", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("session_id").references(() => uploadSessions.id).notNull(),
+  originalFileName: varchar("original_file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  mimeType: varchar("mime_type").notNull(),
+  fileHash: varchar("file_hash").notNull(), // for deduplication
+  storagePath: varchar("storage_path").notNull(),
+  status: varchar("status").default("uploaded"), // uploaded, processing, completed, failed
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Processing jobs - what iLoveImg does in the background
+export const processingJobs = pgTable("processing_jobs", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("session_id").references(() => uploadSessions.id).notNull(),
+  fileUploadId: integer("file_upload_id").references(() => fileUploads.id).notNull(),
+  toolType: varchar("tool_type").notNull(), // compress, resize, crop, etc.
+  settings: jsonb("settings").notNull(), // compression quality, resize dimensions, etc.
+  status: varchar("status").default("queued"), // queued, processing, completed, failed
+  processedFileSize: integer("processed_file_size"),
+  compressionRatio: real("compression_ratio"),
+  processingTime: integer("processing_time"), // in milliseconds
+  outputPath: varchar("output_path"),
+  downloadToken: varchar("download_token").unique(), // secure download token
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Download sessions - tracks file downloads
+export const downloadSessions = pgTable("download_sessions", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("session_id").references(() => uploadSessions.id).notNull(),
+  downloadToken: varchar("download_token").notNull().unique(),
+  downloadCount: integer("download_count").default(0),
+  maxDownloads: integer("max_downloads").default(3),
+  expiresAt: timestamp("expires_at").notNull(),
+  lastDownloadAt: timestamp("last_download_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type ImageJob = typeof imageJobs.$inferSelect;
@@ -86,6 +141,16 @@ export type InsertImageJob = typeof imageJobs.$inferInsert;
 export type ToolUsage = typeof toolUsage.$inferSelect;
 export type InsertToolUsage = typeof toolUsage.$inferInsert;
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+
+// New types
+export type UploadSession = typeof uploadSessions.$inferSelect;
+export type InsertUploadSession = typeof uploadSessions.$inferInsert;
+export type FileUpload = typeof fileUploads.$inferSelect;
+export type InsertFileUpload = typeof fileUploads.$inferInsert;
+export type ProcessingJob = typeof processingJobs.$inferSelect;
+export type InsertProcessingJob = typeof processingJobs.$inferInsert;
+export type DownloadSession = typeof downloadSessions.$inferSelect;
+export type InsertDownloadSession = typeof downloadSessions.$inferInsert;
 
 export const insertImageJobSchema = createInsertSchema(imageJobs).omit({
   id: true,

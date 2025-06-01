@@ -5,7 +5,11 @@ import {
   sessions, 
   imageJobs, 
   toolUsage, 
-  subscriptionPlans 
+  subscriptionPlans,
+  uploadSessions,
+  fileUploads,
+  processingJobs,
+  downloadSessions
 } from '../shared/schema';
 
 // Database connection
@@ -20,7 +24,11 @@ const db = drizzle(pool, {
     sessions, 
     imageJobs, 
     toolUsage, 
-    subscriptionPlans 
+    subscriptionPlans,
+    uploadSessions,
+    fileUploads,
+    processingJobs,
+    downloadSessions
   } 
 });
 
