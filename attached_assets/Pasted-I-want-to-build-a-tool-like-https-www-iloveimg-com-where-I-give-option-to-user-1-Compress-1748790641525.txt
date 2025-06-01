@@ -1,0 +1,144 @@
+I want to build a tool like
+
+
+https://www.iloveimg.com/
+
+
+
+
+where I give option to user
+
+1. Compress IMAGE
+2. Resize IMAGE
+3. Crop IMAGE
+4. Convert to JPG
+5. Photo editor
+
+
+6. More tools  (On mega menu)
+
+
+Optimize
+6.1 Compress IMAGE
+6.2 Upscale
+6.3 Remove background
+
+Create
+6.4 Meme generator
+6.5 Photo editor
+
+Modify
+6.5 Resize IMAGE
+6.6 Crop IMAGE
+6.7 Rotate IMAGE
+
+
+Convert
+6.8 Convert to JPG
+6.9 Convert from JPG
+6.9 HTML to IMAGE
+
+Security
+6.10 Watermark IMAGE
+6.11 Blur face
+
+
+Also a premium features
+
+/user/premium
+
+Get more with Premium
+Edit multiple images faster with batch file processing, convert to several image formats in high resolution and enjoy a web experience free of ads.
+
+Upgrade to Premium
+
+see image 1
+
+1Full access to iLoveIMG tools 
+Compress IMAGE
+Resize IMAGE
+Crop IMAGE
+Convert to JPG
+Convert from JPG
+Convert IMAGE
+Rotate IMAGE
+Watermark IMAGE
+IMAGE Editor
+Meme generator
+HTML to image
+Upscale image
+Blur face
+Remove background
+Unlimited document processing
+No Ads
+Customer support
+`
+
+ALso a user login and signup
+
+
+also a full production ready tool like 
+
+https://www.iloveimg.com/
+`
+
+
+with all features mentioned also make sure 
+
+
+also make sure I need to submit my website to google ads
+
+for the ads showing in website for the google side
+
+also make sure under premium no ads showing
+
+
+also make sure there is the admin side also where I see all the activity of each features
+
+
+
+also how 
+
+https://www.iloveimg.com/
+
+
+showing google ads and other ads features block on website like this see imaeh 2
+
+
+
+
+
+Suppose I go to
+
+https://www.iloveimg.com/compress-image
+
+see imaeg 3
+
+
+
+and when I select image so then this showing
+
+
+see image 4
+
+then when I click on comprss imaeg then this url showing
+
+https://www.iloveimg.com/download/rtnc0Amdx5z1dg8A6rpA5zdl870fcn7ff379yj3q7xkAv06hg4ybvjAccggz1hfjg70cAc5wwdxAm5d6f4599y9dchxsdt6jgAtzjf6c5f76s8q5xAr1sbj1v59gyt4wAgfqjj0538ml6ztA9d66b7ycx3Ajx075lpdgfhqrhlt97sA3lpwq/6
+
+and see the imaeg 5
+
+
+`
+
+
+so the is the flow of image compression on the 
+
+https://www.iloveimg.com/
+`
+
+
+so my domain I purcashed for  this website tool is
+
+"iloveimagetool.com"
+
+`
