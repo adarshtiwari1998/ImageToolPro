@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -10,12 +11,13 @@ import fs from "fs/promises";
 import crypto from "crypto";
 import Stripe from "stripe";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+// Stripe will be initialized when keys are available
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2025-05-28.basil",
+  });
 }
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-});
 
 // Configure multer for file uploads
 const upload = multer({
@@ -297,6 +299,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Stripe subscription routes
   app.post('/api/create-subscription', isAuthenticated, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(503).json({ message: "Payment processing not configured" });
+    }
+    
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -307,9 +313,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (user.stripeSubscriptionId) {
         const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        const invoice = subscription.latest_invoice;
+        const clientSecret = typeof invoice === 'object' && invoice?.payment_intent 
+          ? (typeof invoice.payment_intent === 'object' ? invoice.payment_intent.client_secret : null)
+          : null;
+          
         return res.json({
           subscriptionId: subscription.id,
-          clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+          clientSecret,
         });
       }
 
@@ -321,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{
-          price: process.env.STRIPE_PRICE_ID || 'price_1234567890', // Replace with actual price ID
+          price: process.env.STRIPE_PRICE_ID || 'price_1234567890',
         }],
         payment_behavior: 'default_incomplete',
         expand: ['latest_invoice.payment_intent'],
@@ -329,9 +340,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateUserStripeInfo(userId, customer.id, subscription.id);
 
+      const invoice = subscription.latest_invoice;
+      const clientSecret = typeof invoice === 'object' && invoice?.payment_intent 
+        ? (typeof invoice.payment_intent === 'object' ? invoice.payment_intent.client_secret : null)
+        : null;
+
       res.json({
         subscriptionId: subscription.id,
-        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+        clientSecret,
       });
     } catch (error) {
       console.error('Create subscription error:', error);
@@ -341,6 +357,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Webhook for Stripe events
   app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    if (!stripe) {
+      return res.status(503).json({ message: "Payment processing not configured" });
+    }
+    
     const sig = req.headers['stripe-signature'];
     let event;
 
