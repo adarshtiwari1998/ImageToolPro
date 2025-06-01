@@ -8,19 +8,48 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
+  method: "GET" | "POST" | "PUT" | "DELETE",
+  endpoint: string,
+  data?: any,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  const config: RequestInit = {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
-  });
+  };
 
-  await throwIfResNotOk(res);
-  return res;
+  if (data) {
+    if (data instanceof FormData) {
+      // Don't set Content-Type for FormData, let browser set it with boundary
+      config.body = data;
+    } else {
+      config.headers = {
+        "Content-Type": "application/json",
+      };
+      config.body = JSON.stringify(data);
+    }
+  }
+
+  console.log('Making API request:', method, endpoint, data instanceof FormData ? 'FormData' : data);
+
+  const response = await fetch(endpoint, config);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("401: Authentication required. Please log in.");
+    }
+
+    let errorMessage;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || `HTTP error! status: ${response.status}`;
+    } catch {
+      errorMessage = `HTTP error! status: ${response.status}`;
+    }
+
+    throw new Error(errorMessage);
+  }
+
+  return response;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

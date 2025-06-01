@@ -103,7 +103,7 @@ export default function ImageUploadZone({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       handleFiles(files);
@@ -144,12 +144,12 @@ export default function ImageUploadZone({
           onChange={handleFileInputChange}
           className="hidden"
         />
-        
+
         <div className="space-y-6">
           <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto">
             <i className="fas fa-cloud-upload-alt text-white text-3xl"></i>
           </div>
-          
+
           <div>
             <Button 
               type="button"
@@ -163,7 +163,7 @@ export default function ImageUploadZone({
             </Button>
             <p className="text-gray-500 mt-3">or drop images here</p>
           </div>
-          
+
           <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-400">
             <div className="flex items-center space-x-1">
               <i className="fas fa-upload"></i>

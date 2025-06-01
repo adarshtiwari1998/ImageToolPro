@@ -41,13 +41,28 @@ export default function CompressImage() {
   });
 
   const handleCompress = () => {
-    if (files.length === 0) return;
+    if (files.length === 0) {
+      toast({
+        title: "No files selected",
+        description: "Please select at least one image to compress",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    console.log('Starting compression with files:', files);
+    
     const formData = new FormData();
-    files.forEach((file) => {
+    files.forEach((file, index) => {
+      console.log(`Appending file ${index}:`, file.name, file.type, file.size);
       formData.append('images', file);
     });
     formData.append('quality', quality[0].toString());
+
+    // Log FormData contents
+    for (let pair of formData.entries()) {
+      console.log('FormData entry:', pair[0], pair[1]);
+    }
 
     compressMutation.mutate(formData);
   };
