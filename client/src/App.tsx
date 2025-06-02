@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Router, Route, Switch, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import Landing from "@/pages/Landing";
@@ -21,23 +21,27 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/compress-image" element={<CompressImage />} />
-          <Route path="/resize-image" element={<ResizeImage />} />
-          <Route path="/crop-image" element={<CropImage />} />
-          <Route path="/convert-to-jpg" element={<ConvertToJpg />} />
-          <Route path="/photo-editor" element={<PhotoEditor />} />
-          <Route path="/premium" element={<Premium />} />
-          <Route path="/subscribe" element={<Subscribe />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/logout" element={<Navigate to="/" replace />} />
-          <Route path="/sign-out" element={<Navigate to="/" replace />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Switch>
+          <Route path="/" component={Landing} />
+          <Route path="/home" component={Home} />
+          <Route path="/login" component={Login} />
+          <Route path="/register" component={Register} />
+          <Route path="/compress-image" component={CompressImage} />
+          <Route path="/resize-image" component={ResizeImage} />
+          <Route path="/crop-image" component={CropImage} />
+          <Route path="/convert-to-jpg" component={ConvertToJpg} />
+          <Route path="/photo-editor" component={PhotoEditor} />
+          <Route path="/premium" component={Premium} />
+          <Route path="/subscribe" component={Subscribe} />
+          <Route path="/admin" component={AdminDashboard} />
+          <Route path="/logout">
+            <Redirect to="/" />
+          </Route>
+          <Route path="/sign-out">
+            <Redirect to="/" />
+          </Route>
+          <Route component={NotFound} />
+        </Switch>
       </Router>
       <Toaster />
     </QueryClientProvider>
