@@ -1,5 +1,4 @@
 
-
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
@@ -110,7 +109,7 @@ async function createTables() {
     )
   `);
 
-  // Create image_jobs table
+  // Create image_jobs table with all required columns
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS image_jobs (
       id serial PRIMARY KEY,
@@ -123,6 +122,8 @@ async function createTables() {
       processing_time integer,
       status varchar DEFAULT 'pending',
       download_url varchar,
+      download_token varchar,
+      file_path varchar,
       expires_at timestamp,
       created_at timestamp DEFAULT now()
     )
@@ -335,4 +336,3 @@ async function seed() {
 
 // Run the seed function
 seed();
-
