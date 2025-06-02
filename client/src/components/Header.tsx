@@ -194,13 +194,11 @@ export default function Header() {
               </div>
             ) : (
               <>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => window.location.href = '/api/login'}
-                >
-                  Sign In
-                </Button>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
                 <Link href="/premium">
                   <Button className="bg-accent hover:bg-accent/90" size="sm">
                     <i className="fas fa-crown mr-2"></i>
