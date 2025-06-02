@@ -3,6 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertImageJobSchema, insertToolUsageSchema } from "@shared/schema";
+import { isAuthenticated } from "./auth";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
