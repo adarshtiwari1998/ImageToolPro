@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertImageJobSchema, insertToolUsageSchema } from "@shared/schema";
-import { isAuthenticated } from "./auth";
+import { isAuthenticated, hashPassword, verifyPassword } from "./auth";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
@@ -46,6 +46,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Email and password are required' });
       }
 
+      if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+      }
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
@@ -53,9 +57,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Hash password and create user
-      //const hashedPassword = await hashPassword(password); // Assuming hashPassword function exists
-      const hashedPassword = password; //For testing purpose, directly using password, remove this line and uncommment the above line, and implement hashPassword
-      const userId = crypto.randomUUID(); //nanoid(); // Assuming nanoid function exists
+      const hashedPassword = await hashPassword(password);
+      const userId = crypto.randomUUID();
 
       const user = await storage.createUser({
         id: userId,
@@ -65,11 +68,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName
       });
 
-      //req.session.userId = user.id; // Assuming session management is set up
-      res.json({ user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, isPremium: user.isPremium } });
+      // Set user session
+      (req.session as any).userId = user.id;
+      
+      res.json({ 
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          firstName: user.firstName, 
+          lastName: user.lastName, 
+          isPremium: user.isPremium 
+        } 
+      });
     } catch (error) {
       console.error('Registration error:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ message: error instanceof Error ? error.message : 'Internal server error' });
     }
   });
 
@@ -86,14 +99,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
-      //const isValid = await verifyPassword(password, user.password); // Assuming verifyPassword function exists
-      const isValid = (password === user.password); // For testing purpose, directly comparing password, remove this line and uncommment the above line, and implement verifyPassword
+      const isValid = await verifyPassword(password, user.password);
       if (!isValid) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
-      //req.session.userId = user.id; // Assuming session management is set up
-      res.json({ user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, isPremium: user.isPremium } });
+      // Set user session
+      (req.session as any).userId = user.id;
+      
+      res.json({ 
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          firstName: user.firstName, 
+          lastName: user.lastName, 
+          isPremium: user.isPremium 
+        } 
+      });
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ message: 'Internal server error' });
