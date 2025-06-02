@@ -26,7 +26,8 @@ export default function Login() {
       });
 
       if (response.ok) {
-        window.location.href = '/';
+        // Force a page refresh to update the auth state
+        window.location.reload();
       } else {
         const data = await response.json();
         setError(data.message || 'Login failed');

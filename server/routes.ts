@@ -135,33 +135,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/logout', (req, res) => {
-    //req.session.destroy((err) => { // Assuming session management is set up
-    //  if (err) {
-    //    return res.status(500).json({ message: 'Could not log out' });
-    //  }
-        res.json({ message: 'Logged out successfully' });
-    //});
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Could not log out' });
+      }
+      res.json({ message: 'Logged out successfully' });
+    });
   });
 
-  // Need to remove isAuthenticated here and re-implement it based on session or cookie
-  app.get('/api/auth/user', (req: any, res) => {
-    //TODO: Implement session or cookie based authentication to retrieve user
-    //const user = req.user;
-    //Replace with actual user retrieval logic
-    const user = {
-      id: 'test-user-id',
-      email: 'test@example.com',
-      firstName: 'Test',
-      lastName: 'User',
-      isPremium: false,
-    };
-    res.json({ 
-      id: user.id, 
-      email: user.email, 
-      firstName: user.firstName, 
-      lastName: user.lastName, 
-      isPremium: user.isPremium 
-    });
+  app.get('/api/auth/user', async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+
+      res.json({ 
+        id: user.id, 
+        email: user.email, 
+        firstName: user.firstName, 
+        lastName: user.lastName, 
+        isPremium: user.isPremium 
+      });
+    } catch (error) {
+      console.error('Auth check error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
   });
 
   // Tool usage tracking (public endpoint)
@@ -357,9 +362,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User's image history
-  app.get('/api/my-images', isAuthenticated, async (req: any, res) => {
+  app.get('/api/my-images', async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
       const jobs = await storage.getUserImageJobs(userId);
       res.json(jobs);
     } catch (error) {
@@ -369,9 +378,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get('/api/admin/stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/stats', async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.id);
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
+      const user = await storage.getUser(userId);
       if (!user?.isPremium) {
         return res.status(403).json({ message: 'Admin access required' });
       }
@@ -395,9 +409,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/tool-usage', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/tool-usage', async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.id);
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
+      const user = await storage.getUser(userId);
       if (!user?.isPremium) {
         return res.status(403).json({ message: 'Admin access required' });
       }
@@ -417,13 +436,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stripe subscription routes
-  app.post('/api/create-subscription', isAuthenticated, async (req: any, res) => {
+  app.post('/api/create-subscription', async (req: any, res) => {
     if (!stripe) {
       return res.status(503).json({ message: "Payment processing not configured" });
     }
 
     try {
-      const userId = req.user.id;
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
       const user = await storage.getUser(userId);
 
       if (!user?.email) {
