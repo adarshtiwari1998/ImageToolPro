@@ -27,7 +27,7 @@ export const db = drizzle(pool, { schema });
 export { pool };
 
 import { pgTable, serial, text, integer, real, timestamp } from "drizzle-orm/pg-core";
-import { users } from "./auth";
+import { users } from "@shared/schema";
 
 export const imageJobs = pgTable("image_jobs", {
   id: serial("id").primaryKey(),
