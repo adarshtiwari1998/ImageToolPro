@@ -22,13 +22,32 @@ export default function CompressImage() {
   const compressMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const response = await apiRequest("POST", "/api/compress-image", formData);
-      return response.json();
+      const data = await response.json();
+      
+      // Generate download URLs for each completed job
+      const jobsWithDownloadUrls = await Promise.all(
+        data.jobs.map(async (job: any) => {
+          if (job.status === 'completed') {
+            try {
+              const downloadResponse = await apiRequest("GET", `/api/generate-download/${job.id}`);
+              const downloadData = await downloadResponse.json();
+              return { ...job, downloadUrl: downloadData.downloadUrl };
+            } catch (error) {
+              console.error('Failed to generate download URL for job', job.id);
+              return job;
+            }
+          }
+          return job;
+        })
+      );
+      
+      return { jobs: jobsWithDownloadUrls };
     },
     onSuccess: (data) => {
       setResults(data);
       toast({
         title: "Compression Complete!",
-        description: `Successfully compressed ${data.jobs.length} image(s)`,
+        description: `Successfully compressed ${data.jobs.length} image(s). Click download to get your files.`,
       });
     },
     onError: (error: any) => {

@@ -214,9 +214,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const file of files) {
         const originalSize = file.size;
-        const outputPath = `processed/${crypto.randomUUID()}.jpg`;
-
-        // Create job record
+        
+        // Create job record first
         const job = await storage.createImageJob({
           userId: userId || null,
           toolType: 'compress',
@@ -224,6 +223,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           originalSize,
           status: 'processing',
         });
+
+        const outputPath = `processed/job_${job.id}_${crypto.randomUUID()}.jpg`;
 
         try {
           // Process image with Sharp
@@ -243,7 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             processedSize,
             compressionRatio,
             status: 'completed',
-            downloadUrl: `/api/download/${job.id}`,
+            filePath: outputPath,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
           });
 
@@ -335,10 +336,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Download processed files
-  app.get('/api/download/:jobId', async (req, res) => {
+  // Generate dynamic download URL
+  app.get('/api/generate-download/:jobId', async (req, res) => {
     try {
       const jobId = parseInt(req.params.jobId);
+      const job = await storage.getImageJob(jobId);
+
+      if (!job || job.status !== 'completed') {
+        return res.status(404).json({ message: 'File not found or not ready' });
+      }
+
+      // Generate a dynamic download token (similar to iLoveImg)
+      const downloadToken = crypto.randomBytes(32).toString('hex');
+      const downloadPath = `/download/${downloadToken}/${jobId}`;
+      
+      // Update job with download token (you might want to store this in DB)
+      await storage.updateImageJob(jobId, {
+        downloadToken,
+        downloadUrl: downloadPath,
+      });
+
+      res.json({ downloadUrl: downloadPath });
+    } catch (error) {
+      console.error('Generate download URL error:', error);
+      res.status(500).json({ message: 'Failed to generate download URL' });
+    }
+  });
+
+  // Download processed files with dynamic URL
+  app.get('/download/:token/:jobId', async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.jobId);
+      const token = req.params.token;
       const job = await storage.getImageJob(jobId);
 
       if (!job || job.status !== 'completed') {
@@ -349,23 +378,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(410).json({ message: 'File has expired' });
       }
 
+      // Verify token matches (basic security)
+      if (job.downloadToken !== token) {
+        return res.status(403).json({ message: 'Invalid download token' });
+      }
+
       // Construct the correct file path
-      const fileName = job.downloadUrl?.split('/').pop();
-      const filePath = path.join('processed', fileName || '');
+      const fileName = `${crypto.randomUUID()}.jpg`; // This should match what was saved
+      const filePath = path.join('processed', fileName);
+      
+      // Try to find the file by job ID pattern
+      const files = await fs.readdir('processed');
+      const jobFile = files.find(f => f.includes(job.id.toString()) || f.startsWith(job.id.toString()));
+      
+      let actualFilePath = filePath;
+      if (jobFile) {
+        actualFilePath = path.join('processed', jobFile);
+      } else {
+        // Fallback: try to find any file created around the job creation time
+        const stats = await Promise.all(
+          files.map(async f => ({
+            name: f,
+            stat: await fs.stat(path.join('processed', f))
+          }))
+        );
+        
+        const recentFile = stats
+          .filter(f => Math.abs(f.stat.birthtime.getTime() - job.createdAt.getTime()) < 60000) // within 1 minute
+          .sort((a, b) => Math.abs(a.stat.birthtime.getTime() - job.createdAt.getTime()) - Math.abs(b.stat.birthtime.getTime() - job.createdAt.getTime()))[0];
+        
+        if (recentFile) {
+          actualFilePath = path.join('processed', recentFile.name);
+        }
+      }
       
       try {
-        await fs.access(filePath);
+        await fs.access(actualFilePath);
         
         // Set proper headers for download
-        const fileExtension = path.extname(job.fileName);
         const downloadFileName = `compressed_${job.fileName}`;
         
         res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
         res.setHeader('Content-Type', 'application/octet-stream');
         
-        res.download(filePath, downloadFileName);
+        res.download(actualFilePath, downloadFileName);
       } catch (fileError) {
-        console.error('File not found:', filePath);
+        console.error('File not found:', actualFilePath);
         return res.status(404).json({ message: 'Processed file not found' });
       }
     } catch (error) {

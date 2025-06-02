@@ -1,21 +1,3 @@
-// import 'dotenv/config';
-// import { Pool, neonConfig } from '@neondatabase/serverless';
-// import { drizzle } from 'drizzle-orm/neon-serverless';
-// import ws from "ws";
-// import * as schema from "@shared/schema";
-
-// // This is the correct way neon config - DO NOT change this
-// neonConfig.webSocketConstructor = ws;
-
-// if (!process.env.DATABASE_URL) {
-//   throw new Error(
-//     "DATABASE_URL must be set. Did you forget to provision a database?",
-//   );
-// }
-
-// export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-// export const db = drizzle({ client: pool, schema });
-
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
@@ -43,3 +25,23 @@ pool.on('error', (err) => {
 
 export const db = drizzle(pool, { schema });
 export { pool };
+
+import { pgTable, serial, text, integer, real, timestamp } from "drizzle-orm/pg-core";
+import { users } from "./auth";
+
+export const imageJobs = pgTable("image_jobs", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id),
+  toolType: text("tool_type").notNull(),
+  fileName: text("file_name").notNull(),
+  originalSize: integer("original_size").notNull(),
+  processedSize: integer("processed_size"),
+  compressionRatio: real("compression_ratio"),
+  status: text("status").notNull().default("processing"),
+  downloadUrl: text("download_url"),
+  downloadToken: text("download_token"),
+  filePath: text("file_path"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});

@@ -13,17 +13,30 @@ interface ProcessingResultsProps {
 export default function ProcessingResults({ results, toolType, onReset }: ProcessingResultsProps) {
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
-  const handleDownload = async (jobId: number, fileName: string) => {
+  const handleDownload = async (job: any) => {
     try {
-      // Create a direct link to trigger download
-      const downloadUrl = `/api/download/${jobId}`;
+      if (!job.downloadUrl) {
+        toast({
+          title: "Download Failed",
+          description: "Download URL not available. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Use the dynamic download URL directly
       const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = `compressed_${fileName}`;
+      a.href = job.downloadUrl;
+      a.download = `compressed_${job.fileName}`;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      
+      toast({
+        title: "Download Started",
+        description: `Downloading ${job.fileName}`,
+      });
     } catch (error) {
       console.error('Download error:', error);
       toast({
@@ -37,8 +50,8 @@ export default function ProcessingResults({ results, toolType, onReset }: Proces
   const handleDownloadAll = async () => {
     try {
       for (const job of results.jobs) {
-        if (job.status === 'completed') {
-          await handleDownload(job.id, job.fileName);
+        if (job.status === 'completed' && job.downloadUrl) {
+          await handleDownload(job);
           // Small delay between downloads to avoid overwhelming browser
           await new Promise(resolve => setTimeout(resolve, 800));
         }
