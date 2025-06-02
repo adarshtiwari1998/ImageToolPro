@@ -162,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No files uploaded' });
       }
 
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       const quality = parseInt(req.body.quality) || 80;
 
       // Check premium limits for batch processing
@@ -232,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No files uploaded' });
       }
 
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       const { width, height, maintainAspectRatio } = req.body;
 
       if (!req.user?.isPremium && files.length > 1) {
@@ -324,7 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User's image history
   app.get('/api/my-images', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const jobs = await storage.getUserImageJobs(userId);
       res.json(jobs);
     } catch (error) {
@@ -336,7 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes
   app.get('/api/admin/stats', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.isPremium) {
         return res.status(403).json({ message: 'Admin access required' });
       }
@@ -362,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/admin/tool-usage', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.isPremium) {
         return res.status(403).json({ message: 'Admin access required' });
       }
@@ -388,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
 
       if (!user?.email) {
