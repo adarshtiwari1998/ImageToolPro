@@ -53,6 +53,7 @@ export const imageJobs = pgTable("image_jobs", {
   status: varchar("status").default("pending"), // pending, processing, completed, failed
   downloadUrl: varchar("download_url"),
   downloadToken: varchar("download_token"), // secure download token
+  filePath: varchar("file_path"), // stored file path
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -229,49 +229,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const outputPath = `processed/${outputFileName}`;
 
         try {
-          // Process image with Sharp - preserve original format for better compression
+          // Process image with Sharp - aggressive compression for better results
           let sharpInstance = sharp(file.path);
           
           // Get image metadata to determine original format
           const metadata = await sharpInstance.metadata();
           let processedBuffer: Buffer;
           
-          // Choose optimal format and settings based on original
+          // Aggressive compression settings to ensure smaller file sizes
           if (file.mimetype.includes('png')) {
             // Convert PNG to JPEG for better compression unless transparency is needed
             const hasAlpha = metadata.channels === 4;
             if (hasAlpha) {
               processedBuffer = await sharpInstance
                 .png({ 
-                  quality: Math.max(10, quality - 20),
+                  quality: Math.max(20, quality - 30),
                   compressionLevel: 9,
-                  progressive: true
+                  progressive: true,
+                  palette: true
                 })
                 .toBuffer();
             } else {
               // Convert to JPEG for better compression
               processedBuffer = await sharpInstance
                 .jpeg({ 
-                  quality: Math.max(10, quality),
+                  quality: Math.max(20, Math.min(quality - 20, 75)),
                   progressive: true,
-                  mozjpeg: true
+                  mozjpeg: true,
+                  optimizeScans: true,
+                  optimizeCoding: true
                 })
                 .toBuffer();
             }
           } else if (file.mimetype.includes('webp')) {
             processedBuffer = await sharpInstance
               .webp({ 
-                quality: Math.max(10, quality - 10),
-                effort: 6
+                quality: Math.max(20, quality - 20),
+                effort: 6,
+                smartSubsample: true
               })
               .toBuffer();
           } else {
             // For JPEG and others, use aggressive compression
             processedBuffer = await sharpInstance
               .jpeg({ 
-                quality: Math.max(10, quality),
+                quality: Math.max(20, Math.min(quality - 20, 75)),
                 progressive: true,
-                mozjpeg: true
+                mozjpeg: true,
+                optimizeScans: true,
+                optimizeCoding: true
+              })
+              .toBuffer();
+          }
+
+          // If the compressed file is larger, try more aggressive compression
+          if (processedBuffer.length >= originalSize) {
+            console.log('First compression resulted in larger file, applying more aggressive compression...');
+            processedBuffer = await sharp(file.path)
+              .jpeg({ 
+                quality: Math.max(15, 40),
+                progressive: true,
+                mozjpeg: true,
+                optimizeScans: true,
+                optimizeCoding: true
               })
               .toBuffer();
           }
@@ -283,8 +303,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const processedSize = processedBuffer.length;
           const compressionRatio = ((originalSize - processedSize) / originalSize) * 100;
 
-          // Generate download token and URL
-          const downloadToken = crypto.randomBytes(32).toString('hex');
+          // Generate long download token similar to iLoveImg (64 characters)
+          const downloadToken = crypto.randomBytes(64).toString('hex');
           const downloadUrl = `/download/${downloadToken}/${job.id}`;
 
           // Update job with results
@@ -439,13 +459,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         await fs.access(actualFilePath);
         
-        // Set proper headers for download
+        // Set proper headers for automatic download like iLoveImg
         const downloadFileName = `compressed_${job.fileName}`;
+        const stats = await fs.stat(actualFilePath);
         
         res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
         res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Length', stats.size.toString());
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         
-        res.download(actualFilePath, downloadFileName);
+        // Stream the file for better performance
+        const fileStream = await fs.readFile(actualFilePath);
+        res.send(fileStream);
       } catch (fileError) {
         console.error('File not found:', actualFilePath);
         return res.status(404).json({ message: 'Processed file not found' });

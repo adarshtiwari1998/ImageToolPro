@@ -52,7 +52,7 @@ export default function CompressImage() {
     }
 
     console.log('Starting compression with files:', files);
-    
+
     const formData = new FormData();
     files.forEach((file, index) => {
       console.log(`Appending file ${index}:`, file.name, file.type, file.size);
@@ -94,7 +94,7 @@ export default function CompressImage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tool Header */}
         <div className="text-center mb-12">
