@@ -74,25 +74,18 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = 5000;
 
-  const startServer = () => {
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`serving on port ${port}`);
-    }).on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        log(`Port ${port} is busy, killing processes and retrying...`);
-        // Kill processes using port 5000
-        require('child_process').exec(`fuser -k ${port}/tcp 2>/dev/null || pkill -f "tsx.*server" || true`, () => {
-          setTimeout(startServer, 2000); // Retry after 2 seconds
-        });
-      } else {
-        throw err;
-      }
-    });
-  };
-
-  startServer();
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
+  }).on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      log(`Port ${port} is busy, exiting process...`);
+      process.exit(1);
+    } else {
+      throw err;
+    }
+  });
 })();
