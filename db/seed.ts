@@ -129,6 +129,14 @@ async function createTables() {
     )
   `);
 
+  // Add missing columns if they don't exist
+  await db.execute(sql`
+    ALTER TABLE image_jobs 
+    ADD COLUMN IF NOT EXISTS download_token varchar,
+    ADD COLUMN IF NOT EXISTS file_path varchar
+  `)
+  `);
+
   // Create tool_usage table
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS tool_usage (
