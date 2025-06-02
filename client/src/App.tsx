@@ -38,7 +38,9 @@ function AppRoutes() {
 
   return (
     <Switch>
-      <Route path="/" component={isAuthenticated ? Home : Landing} />
+      <Route path="/">
+        {isAuthenticated ? <Home /> : <Landing />}
+      </Route>
       <Route path="/home" component={Home} />
       <Route path="/compress-image" component={CompressImage} />
       <Route path="/resize-image" component={ResizeImage} />

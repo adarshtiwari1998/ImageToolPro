@@ -2,13 +2,14 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Session configuration for custom auth
-app.use(session({
+const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
@@ -17,7 +18,28 @@ app.use(session({
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
-}));
+};
+
+app.use(session(sessionConfig));
+
+// Parse JSON bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Add user to request object middleware
+app.use(async (req: any, res, next) => {
+  try {
+    if (req.session?.userId) {
+      const user = await storage.getUser(req.session.userId);
+      req.user = user;
+    }
+  } catch (error) {
+    console.error('Error loading user:', error);
+  }
+  next();
+});
+
+registerRoutes(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
