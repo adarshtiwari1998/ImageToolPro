@@ -187,7 +187,15 @@ export default function Header() {
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => window.location.href = '/api/logout'}
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/logout', { method: 'POST' });
+                      window.location.href = '/';
+                    } catch (error) {
+                      console.error('Logout error:', error);
+                      window.location.href = '/';
+                    }
+                  }}
                 >
                   Sign Out
                 </Button>
