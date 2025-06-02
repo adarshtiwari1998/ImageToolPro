@@ -13,45 +13,50 @@ interface ProcessingResultsProps {
 export default function ProcessingResults({ results, toolType, onReset }: ProcessingResultsProps) {
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
-  const handleDownload = async (job: any) => {
-    if (!job.downloadUrl) return;
-    
-    setDownloadingId(job.id);
-    
+  const handleDownload = async (jobId: number, fileName: string) => {
     try {
-      const response = await fetch(job.downloadUrl);
-      if (!response.ok) throw new Error('Download failed');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Create a direct link to trigger download
+      const downloadUrl = `/api/download/${jobId}`;
       const a = document.createElement('a');
-      a.href = url;
-      a.download = job.fileName.replace(/\.[^/.]+$/, `_${toolType}${job.fileName.match(/\.[^/.]+$/)?.[0] || '.jpg'}`);
+      a.href = downloadUrl;
+      a.download = `compressed_${fileName}`;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
       console.error('Download error:', error);
-    } finally {
-      setDownloadingId(null);
+      toast({
+        title: "Download Failed",
+        description: "Could not download the file. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleDownloadAll = async () => {
-    for (const job of results.jobs) {
-      if (job.downloadUrl) {
-        await handleDownload(job);
-        // Small delay between downloads
-        await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      for (const job of results.jobs) {
+        if (job.status === 'completed') {
+          await handleDownload(job.id, job.fileName);
+          // Small delay between downloads to avoid overwhelming browser
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
       }
+    } catch (error) {
+      console.error('Download all error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Some files could not be downloaded.",
+        variant: "destructive",
+      });
     }
   };
 
   const getTotalSavings = () => {
     const totalOriginal = results.jobs.reduce((sum: number, job: any) => sum + (job.originalSize || 0), 0);
     const totalProcessed = results.jobs.reduce((sum: number, job: any) => sum + (job.processedSize || 0), 0);
-    
+
     if (totalOriginal === 0) return 0;
     return ((totalOriginal - totalProcessed) / totalOriginal * 100);
   };
@@ -96,7 +101,7 @@ export default function ProcessingResults({ results, toolType, onReset }: Proces
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
           Your images have been processed!
         </h1>
-        
+
         {toolType === 'compress' && totalSavings > 0 && (
           <div className="bg-gray-50 rounded-xl p-6 mb-6 max-w-md mx-auto">
             <div className="flex items-center justify-center mb-4">
@@ -130,7 +135,7 @@ export default function ProcessingResults({ results, toolType, onReset }: Proces
                 </div>
               </div>
             </div>
-            
+
             <p className="text-gray-700 font-medium">
               Your images are now {Math.round(totalSavings)}% smaller!
             </p>
@@ -196,7 +201,7 @@ export default function ProcessingResults({ results, toolType, onReset }: Proces
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   {job.status === 'completed' && job.downloadUrl && (
                     <Button

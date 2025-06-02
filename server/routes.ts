@@ -231,8 +231,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .jpeg({ quality })
             .toBuffer();
 
-          // Save processed file
-          await fs.mkdir(path.dirname(outputPath), { recursive: true });
+          // Ensure processed directory exists and save file
+          await fs.mkdir('processed', { recursive: true });
           await fs.writeFile(outputPath, processedBuffer);
 
           const processedSize = processedBuffer.length;
@@ -349,12 +349,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(410).json({ message: 'File has expired' });
       }
 
-      const filePath = job.downloadUrl?.replace('/api/download/', 'processed/');
-      if (!filePath) {
-        return res.status(404).json({ message: 'File path not found' });
+      // Construct the correct file path
+      const fileName = job.downloadUrl?.split('/').pop();
+      const filePath = path.join('processed', fileName || '');
+      
+      try {
+        await fs.access(filePath);
+        
+        // Set proper headers for download
+        const fileExtension = path.extname(job.fileName);
+        const downloadFileName = `compressed_${job.fileName}`;
+        
+        res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
+        res.setHeader('Content-Type', 'application/octet-stream');
+        
+        res.download(filePath, downloadFileName);
+      } catch (fileError) {
+        console.error('File not found:', filePath);
+        return res.status(404).json({ message: 'Processed file not found' });
       }
-
-      res.download(filePath, job.fileName);
     } catch (error) {
       console.error('Download error:', error);
       res.status(500).json({ message: 'Download failed' });
