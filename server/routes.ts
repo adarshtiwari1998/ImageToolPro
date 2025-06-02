@@ -224,13 +224,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: 'processing',
         });
 
-        const outputPath = `processed/job_${job.id}_${crypto.randomUUID()}.jpg`;
+        const fileExtension = path.extname(file.originalname) || '.jpg';
+        const outputFileName = `job_${job.id}_${crypto.randomUUID()}${fileExtension}`;
+        const outputPath = `processed/${outputFileName}`;
 
         try {
-          // Process image with Sharp
-          const processedBuffer = await sharp(file.path)
-            .jpeg({ quality })
-            .toBuffer();
+          // Process image with Sharp - preserve original format for better compression
+          let sharpInstance = sharp(file.path);
+          
+          // Get image metadata to determine original format
+          const metadata = await sharpInstance.metadata();
+          let processedBuffer: Buffer;
+          
+          // Choose optimal format and settings based on original
+          if (file.mimetype.includes('png')) {
+            processedBuffer = await sharpInstance
+              .png({ 
+                quality: Math.max(10, quality - 20), // More aggressive for PNG
+                compressionLevel: 9,
+                progressive: true
+              })
+              .toBuffer();
+          } else if (file.mimetype.includes('webp')) {
+            processedBuffer = await sharpInstance
+              .webp({ 
+                quality: Math.max(10, quality - 10),
+                effort: 6
+              })
+              .toBuffer();
+          } else {
+            // For JPEG and others, convert to JPEG with aggressive compression
+            processedBuffer = await sharpInstance
+              .jpeg({ 
+                quality: Math.max(10, quality - 10),
+                progressive: true,
+                mozjpeg: true
+              })
+              .toBuffer();
+          }
 
           // Ensure processed directory exists and save file
           await fs.mkdir('processed', { recursive: true });
@@ -244,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             processedSize,
             compressionRatio,
             status: 'completed',
-            filePath: outputPath,
+            filePath: outputFileName, // Store just the filename
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
           });
 
@@ -383,34 +414,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Invalid download token' });
       }
 
-      // Construct the correct file path
-      const fileName = `${crypto.randomUUID()}.jpg`; // This should match what was saved
-      const filePath = path.join('processed', fileName);
-      
-      // Try to find the file by job ID pattern
-      const files = await fs.readdir('processed');
-      const jobFile = files.find(f => f.includes(job.id.toString()) || f.startsWith(job.id.toString()));
-      
-      let actualFilePath = filePath;
-      if (jobFile) {
-        actualFilePath = path.join('processed', jobFile);
-      } else {
-        // Fallback: try to find any file created around the job creation time
-        const stats = await Promise.all(
-          files.map(async f => ({
-            name: f,
-            stat: await fs.stat(path.join('processed', f))
-          }))
-        );
-        
-        const recentFile = stats
-          .filter(f => Math.abs(f.stat.birthtime.getTime() - job.createdAt.getTime()) < 60000) // within 1 minute
-          .sort((a, b) => Math.abs(a.stat.birthtime.getTime() - job.createdAt.getTime()) - Math.abs(b.stat.birthtime.getTime() - job.createdAt.getTime()))[0];
-        
-        if (recentFile) {
-          actualFilePath = path.join('processed', recentFile.name);
-        }
-      }
+      // Use the stored file path from the job
+      const actualFilePath = path.join('processed', job.filePath || `job_${job.id}_default.jpg`);
       
       try {
         await fs.access(actualFilePath);
