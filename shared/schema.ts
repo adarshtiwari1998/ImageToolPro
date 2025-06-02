@@ -52,6 +52,7 @@ export const imageJobs = pgTable("image_jobs", {
   processingTime: integer("processing_time"), // in milliseconds
   status: varchar("status").default("pending"), // pending, processing, completed, failed
   downloadUrl: varchar("download_url"),
+  downloadToken: varchar("download_token"), // secure download token
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });

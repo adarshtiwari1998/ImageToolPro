@@ -238,13 +238,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Choose optimal format and settings based on original
           if (file.mimetype.includes('png')) {
-            processedBuffer = await sharpInstance
-              .png({ 
-                quality: Math.max(10, quality - 20), // More aggressive for PNG
-                compressionLevel: 9,
-                progressive: true
-              })
-              .toBuffer();
+            // Convert PNG to JPEG for better compression unless transparency is needed
+            const hasAlpha = metadata.channels === 4;
+            if (hasAlpha) {
+              processedBuffer = await sharpInstance
+                .png({ 
+                  quality: Math.max(10, quality - 20),
+                  compressionLevel: 9,
+                  progressive: true
+                })
+                .toBuffer();
+            } else {
+              // Convert to JPEG for better compression
+              processedBuffer = await sharpInstance
+                .jpeg({ 
+                  quality: Math.max(10, quality),
+                  progressive: true,
+                  mozjpeg: true
+                })
+                .toBuffer();
+            }
           } else if (file.mimetype.includes('webp')) {
             processedBuffer = await sharpInstance
               .webp({ 
@@ -253,10 +266,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               })
               .toBuffer();
           } else {
-            // For JPEG and others, convert to JPEG with aggressive compression
+            // For JPEG and others, use aggressive compression
             processedBuffer = await sharpInstance
               .jpeg({ 
-                quality: Math.max(10, quality - 10),
+                quality: Math.max(10, quality),
                 progressive: true,
                 mozjpeg: true
               })
@@ -270,12 +283,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const processedSize = processedBuffer.length;
           const compressionRatio = ((originalSize - processedSize) / originalSize) * 100;
 
+          // Generate download token and URL
+          const downloadToken = crypto.randomBytes(32).toString('hex');
+          const downloadUrl = `/download/${downloadToken}/${job.id}`;
+
           // Update job with results
           const completedJob = await storage.updateImageJob(job.id, {
             processedSize,
             compressionRatio,
             status: 'completed',
             filePath: outputFileName, // Store just the filename
+            downloadToken,
+            downloadUrl,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
           });
 

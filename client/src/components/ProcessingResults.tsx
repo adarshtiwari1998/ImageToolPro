@@ -32,7 +32,7 @@ export default function ProcessingResults({ results, toolType, onReset }: Proces
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      
+
       toast({
         title: "Download Started",
         description: `Downloading ${job.fileName}`,
@@ -48,135 +48,51 @@ export default function ProcessingResults({ results, toolType, onReset }: Proces
   };
 
   const handleDownloadAll = async () => {
-    try {
-      for (const job of results.jobs) {
-        if (job.status === 'completed' && job.downloadUrl) {
-          await handleDownload(job);
-          // Small delay between downloads to avoid overwhelming browser
-          await new Promise(resolve => setTimeout(resolve, 800));
-        }
+    for (const job of results.jobs) {
+      if (job.status === 'completed' && job.downloadUrl) {
+        await handleDownload(job);
+        // Add small delay between downloads
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
-    } catch (error) {
-      console.error('Download all error:', error);
-      toast({
-        title: "Download Failed",
-        description: "Some files could not be downloaded.",
-        variant: "destructive",
-      });
     }
   };
 
-  const getTotalSavings = () => {
-    const totalOriginal = results.jobs.reduce((sum: number, job: any) => sum + (job.originalSize || 0), 0);
-    const totalProcessed = results.jobs.reduce((sum: number, job: any) => sum + (job.processedSize || 0), 0);
-
-    if (totalOriginal === 0) return 0;
-    return ((totalOriginal - totalProcessed) / totalOriginal * 100);
-  };
-
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 KB';
+    if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  const getToolIcon = (type: string) => {
-    switch (type) {
-      case 'compress': return 'fas fa-compress-alt';
-      case 'resize': return 'fas fa-expand-arrows-alt';
-      case 'crop': return 'fas fa-crop-alt';
-      case 'convert': return 'fas fa-exchange-alt';
-      default: return 'fas fa-image';
-    }
-  };
-
-  const getToolColor = (type: string) => {
-    switch (type) {
-      case 'compress': return 'text-blue-600';
-      case 'resize': return 'text-green-600';
-      case 'crop': return 'text-purple-600';
-      case 'convert': return 'text-orange-600';
-      default: return 'text-gray-600';
-    }
-  };
-
-  const totalSavings = getTotalSavings();
+  const completedJobs = results.jobs.filter((job: any) => job.status === 'completed');
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Success Header */}
       <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <i className="fas fa-check text-green-600 text-3xl"></i>
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i className="fas fa-check text-2xl text-green-600"></i>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
           Your images have been processed!
         </h1>
-
-        {toolType === 'compress' && totalSavings > 0 && (
-          <div className="bg-gray-50 rounded-xl p-6 mb-6 max-w-md mx-auto">
-            <div className="flex items-center justify-center mb-4">
-              <div className="relative w-24 h-24">
-                <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 84 84">
-                  <circle 
-                    cx="42" 
-                    cy="42" 
-                    r="38" 
-                    stroke="#e5e7eb" 
-                    strokeWidth="6" 
-                    fill="none"
-                  />
-                  <circle 
-                    cx="42" 
-                    cy="42" 
-                    r="38" 
-                    stroke="#10B981" 
-                    strokeWidth="6" 
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 38}`}
-                    strokeDashoffset={`${2 * Math.PI * 38 * (1 - totalSavings / 100)}`}
-                    className="transition-all duration-1000 ease-in-out"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{Math.round(totalSavings)}%</div>
-                    <div className="text-xs text-gray-500">smaller</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-gray-700 font-medium">
-              Your images are now {Math.round(totalSavings)}% smaller!
-            </p>
-            <p className="text-sm text-gray-600 mt-1">
-              {formatFileSize(results.jobs.reduce((sum: number, job: any) => sum + (job.originalSize || 0), 0))} → {' '}
-              {formatFileSize(results.jobs.reduce((sum: number, job: any) => sum + (job.processedSize || 0), 0))}
-            </p>
-          </div>
-        )}
+        <p className="text-gray-600">
+          {completedJobs.length} image{completedJobs.length !== 1 ? 's' : ''} processed successfully
+        </p>
       </div>
 
-      {/* Results */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Processed Images ({results.jobs.length})</span>
-            <div className="flex space-x-2">
-              <Button
-                onClick={handleDownloadAll}
-                className="bg-primary hover:bg-primary/90"
-              >
-                <i className="fas fa-download mr-2"></i>
-                Download All
-              </Button>
-              <Button
-                variant="outline"
-                onClick={onReset}
-              >
+            <span>Processed Images ({completedJobs.length})</span>
+            <div className="flex gap-2">
+              {completedJobs.length > 1 && (
+                <Button onClick={handleDownloadAll} className="bg-blue-600 hover:bg-blue-700">
+                  <i className="fas fa-download mr-2"></i>
+                  Download All
+                </Button>
+              )}
+              <Button variant="outline" onClick={onReset}>
                 <i className="fas fa-plus mr-2"></i>
                 Process More
               </Button>
@@ -185,113 +101,82 @@ export default function ProcessingResults({ results, toolType, onReset }: Proces
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {results.jobs.map((job: any) => (
+            {completedJobs.map((job: any) => (
               <div key={job.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center`}>
-                    <i className={`${getToolIcon(toolType)} ${getToolColor(toolType)} text-xl`}></i>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-image text-blue-600"></i>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900">{job.fileName}</h4>
+                    <p className="font-medium text-gray-900">{job.fileName}</p>
                     <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      <span>
-                        {formatFileSize(job.originalSize || 0)}
-                        {job.processedSize && (
-                          <> → {formatFileSize(job.processedSize)}</>
-                        )}
+                      <span>{formatFileSize(job.originalSize)} → {formatFileSize(job.processedSize)}</span>
+                      <span className={`font-medium ${job.compressionRatio > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {job.compressionRatio > 0 ? '-' : '+'}{Math.abs(job.compressionRatio).toFixed(1)}% 
+                        {job.compressionRatio > 0 ? ' smaller' : ' larger'}
                       </span>
-                      {job.compressionRatio && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          {Math.round(job.compressionRatio)}% smaller
-                        </Badge>
-                      )}
-                      <Badge 
-                        variant={job.status === 'completed' ? 'default' : 'destructive'}
-                        className={job.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
-                      >
-                        {job.status}
-                      </Badge>
+                      <span className="text-green-600 font-medium">completed</span>
                     </div>
                   </div>
                 </div>
-
-                <div className="flex items-center space-x-2">
-                  {job.status === 'completed' && job.downloadUrl && (
-                    <Button
-                      onClick={() => handleDownload(job)}
-                      disabled={downloadingId === job.id}
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90"
-                    >
-                      {downloadingId === job.id ? (
-                        <i className="fas fa-spinner fa-spin mr-2"></i>
-                      ) : (
-                        <i className="fas fa-download mr-2"></i>
-                      )}
+                <Button
+                  onClick={() => handleDownload(job)}
+                  disabled={downloadingId === job.id}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {downloadingId === job.id ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin mr-2"></i>
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-download mr-2"></i>
                       Download
-                    </Button>
+                    </>
                   )}
-                </div>
+                </Button>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Continue to other tools */}
+      {/* Continue to section */}
       <Card>
         <CardHeader>
           <CardTitle>Continue to...</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link href="/resize-image">
-              <div className="flex items-center space-x-3 bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-expand-arrows-alt text-green-600"></i>
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Resize IMAGE</div>
-                </div>
-                <i className="fas fa-chevron-right text-gray-400 text-sm ml-auto"></i>
+            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mb-2">
+                <i className="fas fa-expand-alt text-green-600"></i>
               </div>
-            </Link>
-
-            <Link href="/crop-image">
-              <div className="flex items-center space-x-3 bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-crop-alt text-purple-600"></i>
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Crop IMAGE</div>
-                </div>
-                <i className="fas fa-chevron-right text-gray-400 text-sm ml-auto"></i>
+              <span className="font-medium">Resize</span>
+              <span className="text-xs text-gray-600">IMAGE</span>
+            </Button>
+            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-2">
+                <i className="fas fa-crop-alt text-purple-600"></i>
               </div>
-            </Link>
-
-            <Link href="/rotate-image">
-              <div className="flex items-center space-x-3 bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer">
-                <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-redo text-yellow-600"></i>
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Rotate IMAGE</div>
-                </div>
-                <i className="fas fa-chevron-right text-gray-400 text-sm ml-auto"></i>
+              <span className="font-medium">Crop</span>
+              <span className="text-xs text-gray-600">IMAGE</span>
+            </Button>
+            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
+                <i className="fas fa-redo text-blue-600"></i>
               </div>
-            </Link>
-
-            <Link href="/convert-to-jpg">
-              <div className="flex items-center space-x-3 bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer">
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-exchange-alt text-orange-600"></i>
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">Convert to JPG</div>
-                </div>
-                <i className="fas fa-chevron-right text-gray-400 text-sm ml-auto"></i>
+              <span className="font-medium">Rotate</span>
+              <span className="text-xs text-gray-600">IMAGE</span>
+            </Button>
+            <Button variant="outline" className="flex flex-col items-center p-4 h-auto">
+              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2">
+                <i className="fas fa-exchange-alt text-orange-600"></i>
               </div>
-            </Link>
+              <span className="font-medium">Convert to</span>
+              <span className="text-xs text-gray-600">JPG</span>
+            </Button>
           </div>
         </CardContent>
       </Card>

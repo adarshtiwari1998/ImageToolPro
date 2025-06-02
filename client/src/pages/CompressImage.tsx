@@ -23,25 +23,7 @@ export default function CompressImage() {
     mutationFn: async (formData: FormData) => {
       const response = await apiRequest("POST", "/api/compress-image", formData);
       const data = await response.json();
-      
-      // Generate download URLs for each completed job
-      const jobsWithDownloadUrls = await Promise.all(
-        data.jobs.map(async (job: any) => {
-          if (job.status === 'completed') {
-            try {
-              const downloadResponse = await apiRequest("GET", `/api/generate-download/${job.id}`);
-              const downloadData = await downloadResponse.json();
-              return { ...job, downloadUrl: downloadData.downloadUrl };
-            } catch (error) {
-              console.error('Failed to generate download URL for job', job.id);
-              return job;
-            }
-          }
-          return job;
-        })
-      );
-      
-      return { jobs: jobsWithDownloadUrls };
+      return data;
     },
     onSuccess: (data) => {
       setResults(data);
