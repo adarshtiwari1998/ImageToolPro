@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 
@@ -11,6 +12,7 @@ interface ProcessingResultsProps {
 }
 
 export default function ProcessingResults({ results, toolType, onReset }: ProcessingResultsProps) {
+  const { toast } = useToast();
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const handleDownload = async (job: any) => {
