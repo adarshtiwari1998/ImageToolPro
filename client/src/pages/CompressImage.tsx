@@ -26,11 +26,18 @@ export default function CompressImage() {
       return data;
     },
     onSuccess: (data) => {
-      setResults(data);
-      toast({
-        title: "Compression Complete!",
-        description: `Successfully compressed ${data.jobs.length} image(s). Click download to get your files.`,
-      });
+      // Get the first completed job
+      const completedJob = data.jobs.find((job: any) => job.status === 'completed');
+      if (completedJob && completedJob.downloadToken) {
+        // Navigate to download page immediately
+        window.location.href = `/download/${completedJob.downloadToken}/${completedJob.id}`;
+      } else {
+        setResults(data);
+        toast({
+          title: "Compression Complete!",
+          description: `Successfully compressed ${data.jobs.length} image(s).`,
+        });
+      }
     },
     onError: (error: any) => {
       toast({

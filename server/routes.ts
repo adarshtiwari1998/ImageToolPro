@@ -483,6 +483,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get specific job details
+  app.get('/api/job/:jobId', async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.jobId);
+      const job = await storage.getImageJob(jobId);
+
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      res.json(job);
+    } catch (error) {
+      console.error('Get job error:', error);
+      res.status(500).json({ message: 'Failed to fetch job details' });
+    }
+  });
+
   // User's image history
   app.get('/api/my-images', async (req: any, res) => {
     try {

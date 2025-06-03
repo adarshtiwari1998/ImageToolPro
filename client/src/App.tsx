@@ -5,16 +5,17 @@ import { useAuth } from "@/hooks/useAuth";
 
 import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
-import CompressImage from "@/pages/CompressImage";
-import ResizeImage from "@/pages/ResizeImage";
-import CropImage from "@/pages/CropImage";
-import ConvertToJpg from "@/pages/ConvertToJpg";
-import PhotoEditor from "@/pages/PhotoEditor";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Premium from "@/pages/Premium";
 import Subscribe from "@/pages/Subscribe";
+import CompressImage from "@/pages/CompressImage";
+import ResizeImage from "@/pages/ResizeImage";
+import ConvertToJpg from "@/pages/ConvertToJpg";
+import CropImage from "@/pages/CropImage";
+import PhotoEditor from "@/pages/PhotoEditor";
 import AdminDashboard from "@/pages/AdminDashboard";
+import DownloadPage from "@/pages/DownloadPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -45,13 +46,9 @@ function AppRoutes() {
       <Route path="/compress-image" component={CompressImage} />
       <Route path="/resize-image" component={ResizeImage} />
       <Route path="/crop-image" component={CropImage} />
-      <Route path="/convert-to-jpg" component={ConvertToJpg} />
       <Route path="/photo-editor" component={PhotoEditor} />
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <Route path="/premium" component={Premium} />
-      <Route path="/subscribe" component={Subscribe} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/download/:token/:jobId" component={DownloadPage} />
       <Route component={NotFound} />
     </Switch>
   );
