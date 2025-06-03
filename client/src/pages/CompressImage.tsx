@@ -29,17 +29,16 @@ export default function CompressImage() {
       // Get the first completed job
       const completedJob = data.jobs.find((job: any) => job.status === 'completed');
       if (completedJob && completedJob.downloadToken) {
-        // Show success message and navigate after a short delay to show the loader effect
+        // Show success message
         toast({
           title: "Compression Complete!",
-          description: "Redirecting to download...",
+          description: "Redirecting to download page...",
         });
         
-        // Navigate to download page after showing the success state briefly
-        setTimeout(() => {
-          window.location.href = `/download/${completedJob.downloadToken}/${completedJob.id}`;
-        }, 1500);
+        // Redirect immediately to download page like iLoveImg
+        window.location.href = `/download/${completedJob.downloadToken}/${completedJob.id}`;
       } else {
+        // Fallback for any edge cases
         setResults(data);
         toast({
           title: "Compression Complete!",

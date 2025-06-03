@@ -303,8 +303,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const processedSize = processedBuffer.length;
           const compressionRatio = ((originalSize - processedSize) / originalSize) * 100;
 
-          // Generate long download token similar to iLoveImg (64 characters)
-          const downloadToken = crypto.randomBytes(64).toString('hex');
+          // Generate long download token similar to iLoveImg (32 bytes = 64 hex characters)
+          const downloadToken = crypto.randomBytes(32).toString('hex');
           const downloadUrl = `/download/${downloadToken}/${job.id}`;
 
           // Update job with results
