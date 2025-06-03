@@ -29,8 +29,16 @@ export default function CompressImage() {
       // Get the first completed job
       const completedJob = data.jobs.find((job: any) => job.status === 'completed');
       if (completedJob && completedJob.downloadToken) {
-        // Navigate to download page immediately
-        window.location.href = `/download/${completedJob.downloadToken}/${completedJob.id}`;
+        // Show success message and navigate after a short delay to show the loader effect
+        toast({
+          title: "Compression Complete!",
+          description: "Redirecting to download...",
+        });
+        
+        // Navigate to download page after showing the success state briefly
+        setTimeout(() => {
+          window.location.href = `/download/${completedJob.downloadToken}/${completedJob.id}`;
+        }, 1500);
       } else {
         setResults(data);
         toast({
@@ -161,7 +169,16 @@ export default function CompressImage() {
             </Card>
 
             {/* Compression Settings */}
-            <Card>
+            <Card className="relative">
+              {compressMutation.isPending && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+                  <div className="text-center">
+                    <i className="fas fa-spinner fa-spin text-3xl text-blue-600 mb-4"></i>
+                    <p className="text-lg font-semibold text-gray-900">Compressing your images...</p>
+                    <p className="text-sm text-gray-600">This may take a few moments</p>
+                  </div>
+                </div>
+              )}
               <CardHeader>
                 <CardTitle>Compression Settings</CardTitle>
               </CardHeader>
@@ -177,6 +194,7 @@ export default function CompressImage() {
                     min={10}
                     step={10}
                     className="w-full"
+                    disabled={compressMutation.isPending}
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>Smaller file</span>
@@ -189,6 +207,7 @@ export default function CompressImage() {
                     variant={quality[0] <= 50 ? "default" : "outline"}
                     onClick={() => setQuality([30])}
                     className="flex flex-col items-center p-4 h-auto"
+                    disabled={compressMutation.isPending}
                   >
                     <div className="font-semibold">High Compression</div>
                     <div className="text-sm text-gray-600">Smaller files</div>
@@ -197,6 +216,7 @@ export default function CompressImage() {
                     variant={quality[0] > 50 && quality[0] <= 85 ? "default" : "outline"}
                     onClick={() => setQuality([80])}
                     className="flex flex-col items-center p-4 h-auto"
+                    disabled={compressMutation.isPending}
                   >
                     <div className="font-semibold">Recommended</div>
                     <div className="text-sm text-gray-600">Best balance</div>
@@ -205,6 +225,7 @@ export default function CompressImage() {
                     variant={quality[0] > 85 ? "default" : "outline"}
                     onClick={() => setQuality([95])}
                     className="flex flex-col items-center p-4 h-auto"
+                    disabled={compressMutation.isPending}
                   >
                     <div className="font-semibold">Low Compression</div>
                     <div className="text-sm text-gray-600">High quality</div>
@@ -234,7 +255,7 @@ export default function CompressImage() {
                   {compressMutation.isPending ? (
                     <>
                       <i className="fas fa-spinner fa-spin mr-2"></i>
-                      Compressing...
+                      Compressing & Preparing Download...
                     </>
                   ) : (
                     <>
