@@ -26,18 +26,26 @@ export default function CompressImage() {
       return data;
     },
     onSuccess: (data) => {
+      console.log('Compression success, received data:', data);
+      
       // Get the first completed job
-      const completedJob = data.jobs.find((job: any) => job.status === 'completed');
-      if (completedJob && completedJob.downloadToken) {
+      const completedJob = data.jobs && data.jobs.length > 0 ? data.jobs[0] : null;
+      
+      if (completedJob && completedJob.status === 'completed' && completedJob.downloadToken && completedJob.id) {
         // Show success message
         toast({
           title: "Compression Complete!",
           description: "Redirecting to download page...",
         });
         
-        // Redirect immediately to download page like iLoveImg
-        window.location.href = `/download/${completedJob.downloadToken}/${completedJob.id}`;
+        console.log('Redirecting to:', `/download/${completedJob.downloadToken}/${completedJob.id}`);
+        
+        // Add a small delay to ensure the toast is shown, then redirect
+        setTimeout(() => {
+          window.location.href = `/download/${completedJob.downloadToken}/${completedJob.id}`;
+        }, 1000);
       } else {
+        console.log('No completed job with download token found, showing results instead');
         // Fallback for any edge cases
         setResults(data);
         toast({
@@ -170,11 +178,16 @@ export default function CompressImage() {
             {/* Compression Settings */}
             <Card className="relative">
               {compressMutation.isPending && (
-                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+                <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
                   <div className="text-center">
-                    <i className="fas fa-spinner fa-spin text-3xl text-blue-600 mb-4"></i>
-                    <p className="text-lg font-semibold text-gray-900">Compressing your images...</p>
-                    <p className="text-sm text-gray-600">This may take a few moments</p>
+                    <i className="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+                    <p className="text-lg font-semibold text-gray-900">Processing your images...</p>
+                    <p className="text-sm text-gray-600">Compressing and preparing download link</p>
+                    <div className="mt-4">
+                      <div className="w-32 bg-gray-200 rounded-full h-2 mx-auto">
+                        <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{width: '70%'}}></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -254,7 +267,7 @@ export default function CompressImage() {
                   {compressMutation.isPending ? (
                     <>
                       <i className="fas fa-spinner fa-spin mr-2"></i>
-                      Compressing & Preparing Download...
+                      Processing & Preparing Download...
                     </>
                   ) : (
                     <>
