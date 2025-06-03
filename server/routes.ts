@@ -216,6 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const originalSize = file.size;
         
         // Create job record first
+        console.log('Creating job for file:', file.originalname);
         const job = await storage.createImageJob({
           userId: userId || null,
           toolType: 'compress',
@@ -223,6 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           originalSize,
           status: 'processing',
         });
+        console.log('Created job with ID:', job.id);
 
         const fileExtension = path.extname(file.originalname) || '.jpg';
         const outputFileName = `job_${job.id}_${crypto.randomUUID()}${fileExtension}`;
@@ -307,6 +309,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const downloadToken = crypto.randomBytes(32).toString('hex');
           const downloadUrl = `/download/${downloadToken}/${job.id}`;
 
+          console.log('Generated download token:', downloadToken);
+          console.log('Job ID:', job.id);
+          console.log('Download URL:', downloadUrl);
+
           // Update job with results
           const completedJob = await storage.updateImageJob(job.id, {
             processedSize,
@@ -317,6 +323,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             downloadUrl,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
           });
+
+          console.log('Updated job:', completedJob);
 
           results.push(completedJob);
 
@@ -329,6 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      console.log('Sending response with jobs:', results);
       res.json({ jobs: results });
     } catch (error) {
       console.error('Compress image error:', error);

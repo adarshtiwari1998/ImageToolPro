@@ -237,32 +237,46 @@ export const storage: IStorage = {
     return user;
   },
 
-  async createImageJob(job: InsertImageJob): Promise<ImageJob> {
-    const [imageJob] = await db.insert(imageJobs).values(job).returning();
-    return imageJob;
+  async getUserImageJobs(userId: string) {
+    return db.select().from(imageJobs).where(eq(imageJobs.userId, userId)).orderBy(desc(imageJobs.createdAt));
   },
 
-  async getImageJob(id: number): Promise<ImageJob | undefined> {
-    const [job] = await db.select().from(imageJobs).where(eq(imageJobs.id, id));
+  async createImageJob(data: {
+    userId: string | null;
+    toolType: string;
+    fileName: string;
+    originalSize: number;
+    status?: string;
+  }) {
+    const [job] = await db.insert(imageJobs).values({
+      userId: data.userId,
+      toolType: data.toolType,
+      fileName: data.fileName,
+      originalSize: data.originalSize,
+      status: data.status || 'processing',
+    }).returning();
     return job;
   },
 
-  async updateImageJob(id: number, updates: Partial<ImageJob>): Promise<ImageJob> {
-    const [job] = await db
-      .update(imageJobs)
+  async updateImageJob(jobId: number, updates: {
+    processedSize?: number;
+    compressionRatio?: number;
+    status?: string;
+    downloadUrl?: string;
+    downloadToken?: string;
+    filePath?: string;
+    expiresAt?: Date;
+  }) {
+    const [job] = await db.update(imageJobs)
       .set(updates)
-      .where(eq(imageJobs.id, id))
+      .where(eq(imageJobs.id, jobId))
       .returning();
     return job;
   },
 
-  async getUserImageJobs(userId: string, limit = 50): Promise<ImageJob[]> {
-    return await db
-      .select()
-      .from(imageJobs)
-      .where(eq(imageJobs.userId, userId))
-      .orderBy(desc(imageJobs.createdAt))
-      .limit(limit);
+  async getImageJob(jobId: number) {
+    const [job] = await db.select().from(imageJobs).where(eq(imageJobs.id, jobId));
+    return job;
   },
 
   async recordToolUsage(usage: InsertToolUsage): Promise<ToolUsage> {
