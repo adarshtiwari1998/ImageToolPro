@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ImageUploadZone from "@/components/ImageUploadZone";
@@ -15,6 +16,7 @@ import AdBanner from "@/components/AdBanner";
 export default function CompressImage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [location, setLocation] = useLocation();
   const [files, setFiles] = useState<File[]>([]);
   const [quality, setQuality] = useState([80]);
   const [results, setResults] = useState(null);
@@ -40,9 +42,9 @@ export default function CompressImage() {
         
         console.log('Redirecting to:', `/download/${completedJob.downloadToken}/${completedJob.id}`);
         
-        // Add a small delay to ensure the toast is shown, then redirect
+        // Use wouter's setLocation for navigation
         setTimeout(() => {
-          window.location.href = `/download/${completedJob.downloadToken}/${completedJob.id}`;
+          setLocation(`/download/${completedJob.downloadToken}/${completedJob.id}`);
         }, 1000);
       } else {
         console.log('No completed job with download token found, showing results instead');
