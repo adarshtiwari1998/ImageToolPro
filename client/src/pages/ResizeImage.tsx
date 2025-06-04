@@ -27,6 +27,7 @@ export default function ResizeImage() {
   const [maintainAspectRatio, setMaintainAspectRatio] = useState(true);
   const [doNotEnlarge, setDoNotEnlarge] = useState(false);
   const [preserveQuality, setPreserveQuality] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [results, setResults] = useState(null);
 
   const resizeMutation = useMutation({
@@ -200,7 +201,10 @@ export default function ResizeImage() {
                   <div className="grid grid-cols-2 gap-3 mt-3">
                     <Button
                       variant={resizeMode === "pixels" ? "default" : "outline"}
-                      onClick={() => setResizeMode("pixels")}
+                      onClick={() => {
+                        setResizeMode("pixels");
+                        setSelectedPreset(null);
+                      }}
                       className="flex items-center justify-center h-16"
                     >
                       <div className="text-center">
@@ -210,7 +214,10 @@ export default function ResizeImage() {
                     </Button>
                     <Button
                       variant={resizeMode === "percentage" ? "default" : "outline"}
-                      onClick={() => setResizeMode("percentage")}
+                      onClick={() => {
+                        setResizeMode("percentage");
+                        setSelectedPreset(null);
+                      }}
                       className="flex items-center justify-center h-16"
                     >
                       <div className="text-center">
@@ -230,15 +237,22 @@ export default function ResizeImage() {
                         {presetSizes.map((preset) => (
                           <Button
                             key={preset.name}
-                            variant="outline"
+                            variant={selectedPreset === preset.name ? "default" : "outline"}
                             onClick={() => {
                               setWidth(preset.width);
                               setHeight(preset.height);
+                              setSelectedPreset(preset.name);
                             }}
-                            className="flex flex-col items-center h-auto p-3"
+                            className={`flex flex-col items-center h-auto p-3 ${
+                              selectedPreset === preset.name 
+                                ? "bg-blue-600 text-white border-blue-600" 
+                                : "hover:bg-blue-50 hover:border-blue-300"
+                            }`}
                           >
                             <div className="font-medium text-sm">{preset.name}</div>
-                            <div className="text-xs text-gray-600">
+                            <div className={`text-xs ${
+                              selectedPreset === preset.name ? "text-blue-100" : "text-gray-600"
+                            }`}>
                               {preset.width} × {preset.height}
                             </div>
                           </Button>
@@ -258,7 +272,10 @@ export default function ResizeImage() {
                             id="width"
                             type="number"
                             value={width}
-                            onChange={(e) => setWidth(e.target.value)}
+                            onChange={(e) => {
+                              setWidth(e.target.value);
+                              setSelectedPreset(null);
+                            }}
                             placeholder="Width"
                           />
                         </div>
@@ -268,7 +285,10 @@ export default function ResizeImage() {
                             id="height"
                             type="number"
                             value={height}
-                            onChange={(e) => setHeight(e.target.value)}
+                            onChange={(e) => {
+                              setHeight(e.target.value);
+                              setSelectedPreset(null);
+                            }}
                             placeholder="Height"
                           />
                         </div>
