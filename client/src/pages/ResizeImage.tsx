@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ImageUploadZone from "@/components/ImageUploadZone";
@@ -17,23 +18,50 @@ import AdBanner from "@/components/AdBanner";
 export default function ResizeImage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [location, setLocation] = useLocation();
   const [files, setFiles] = useState<File[]>([]);
+  const [resizeMode, setResizeMode] = useState<"pixels" | "percentage">("pixels");
   const [width, setWidth] = useState("800");
   const [height, setHeight] = useState("600");
+  const [percentage, setPercentage] = useState("100");
   const [maintainAspectRatio, setMaintainAspectRatio] = useState(true);
+  const [doNotEnlarge, setDoNotEnlarge] = useState(false);
   const [results, setResults] = useState(null);
 
   const resizeMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const response = await apiRequest("POST", "/api/resize-image", formData);
-      return response.json();
+      const data = await response.json();
+      return data;
     },
     onSuccess: (data) => {
-      setResults(data);
-      toast({
-        title: "Resize Complete!",
-        description: `Successfully resized ${data.jobs.length} image(s)`,
-      });
+      console.log('Resize success, received data:', data);
+      
+      // Get the first completed job
+      const completedJob = data.jobs && data.jobs.length > 0 ? data.jobs[0] : null;
+      
+      if (completedJob && completedJob.status === 'completed' && completedJob.downloadToken && completedJob.id) {
+        // Show success message
+        toast({
+          title: "Resize Complete!",
+          description: "Redirecting to download page...",
+        });
+        
+        console.log('Redirecting to:', `/download/${completedJob.downloadToken}/${completedJob.id}`);
+        
+        // Use wouter's setLocation for navigation
+        setTimeout(() => {
+          setLocation(`/download/${completedJob.downloadToken}/${completedJob.id}`);
+        }, 1000);
+      } else {
+        console.log('No completed job with download token found, showing results instead');
+        // Fallback for any edge cases
+        setResults(data);
+        toast({
+          title: "Resize Complete!",
+          description: `Successfully resized ${data.jobs.length} image(s).`,
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -51,9 +79,16 @@ export default function ResizeImage() {
     files.forEach((file) => {
       formData.append('images', file);
     });
-    formData.append('width', width);
-    formData.append('height', height);
+    
+    formData.append('resizeMode', resizeMode);
+    if (resizeMode === 'pixels') {
+      formData.append('width', width);
+      formData.append('height', height);
+    } else {
+      formData.append('percentage', percentage);
+    }
     formData.append('maintainAspectRatio', maintainAspectRatio.toString());
+    formData.append('doNotEnlarge', doNotEnlarge.toString());
 
     resizeMutation.mutate(formData);
   };
@@ -157,63 +192,131 @@ export default function ResizeImage() {
                 <CardTitle>Resize Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Preset Sizes */}
+                {/* Resize Mode Toggle */}
                 <div>
-                  <Label className="text-base font-medium">Popular Sizes</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
-                    {presetSizes.map((preset) => (
-                      <Button
-                        key={preset.name}
-                        variant="outline"
-                        onClick={() => {
-                          setWidth(preset.width);
-                          setHeight(preset.height);
-                        }}
-                        className="flex flex-col items-center h-auto p-3"
-                      >
-                        <div className="font-medium text-sm">{preset.name}</div>
-                        <div className="text-xs text-gray-600">
-                          {preset.width} × {preset.height}
-                        </div>
-                      </Button>
-                    ))}
+                  <Label className="text-base font-medium">Resize options</Label>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <Button
+                      variant={resizeMode === "pixels" ? "default" : "outline"}
+                      onClick={() => setResizeMode("pixels")}
+                      className="flex items-center justify-center h-16"
+                    >
+                      <div className="text-center">
+                        <i className="fas fa-expand-arrows-alt text-lg mb-1"></i>
+                        <div className="text-sm font-medium">By pixels</div>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={resizeMode === "percentage" ? "default" : "outline"}
+                      onClick={() => setResizeMode("percentage")}
+                      className="flex items-center justify-center h-16"
+                    >
+                      <div className="text-center">
+                        <i className="fas fa-percentage text-lg mb-1"></i>
+                        <div className="text-sm font-medium">By percentage</div>
+                      </div>
+                    </Button>
                   </div>
                 </div>
 
-                {/* Custom Dimensions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {resizeMode === "pixels" ? (
+                  <>
+                    {/* Preset Sizes - Only show for pixels mode */}
+                    <div>
+                      <Label className="text-base font-medium">Popular Sizes</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
+                        {presetSizes.map((preset) => (
+                          <Button
+                            key={preset.name}
+                            variant="outline"
+                            onClick={() => {
+                              setWidth(preset.width);
+                              setHeight(preset.height);
+                            }}
+                            className="flex flex-col items-center h-auto p-3"
+                          >
+                            <div className="font-medium text-sm">{preset.name}</div>
+                            <div className="text-xs text-gray-600">
+                              {preset.width} × {preset.height}
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Custom Dimensions */}
+                    <div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Resize all images to a <strong>exact size</strong> of
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="width">Width (px):</Label>
+                          <Input
+                            id="width"
+                            type="number"
+                            value={width}
+                            onChange={(e) => setWidth(e.target.value)}
+                            placeholder="Width"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="height">Height (px):</Label>
+                          <Input
+                            id="height"
+                            type="number"
+                            value={height}
+                            onChange={(e) => setHeight(e.target.value)}
+                            placeholder="Height"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  /* Percentage Mode */
                   <div>
-                    <Label htmlFor="width">Width (pixels)</Label>
-                    <Input
-                      id="width"
-                      type="number"
-                      value={width}
-                      onChange={(e) => setWidth(e.target.value)}
-                      placeholder="Width"
-                    />
+                    <p className="text-sm text-gray-600 mb-3">
+                      Resize all images by <strong>percentage</strong>
+                    </p>
+                    <div>
+                      <Label htmlFor="percentage">Percentage (%):</Label>
+                      <Input
+                        id="percentage"
+                        type="number"
+                        value={percentage}
+                        onChange={(e) => setPercentage(e.target.value)}
+                        placeholder="100"
+                        min="1"
+                        max="500"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="height">Height (pixels)</Label>
-                    <Input
-                      id="height"
-                      type="number"
-                      value={height}
-                      onChange={(e) => setHeight(e.target.value)}
-                      placeholder="Height"
-                    />
-                  </div>
-                </div>
+                )}
 
                 {/* Options */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="maintain-aspect-ratio"
-                    checked={maintainAspectRatio}
-                    onCheckedChange={setMaintainAspectRatio}
-                  />
-                  <Label htmlFor="maintain-aspect-ratio">
-                    Maintain aspect ratio (recommended)
-                  </Label>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="maintain-aspect-ratio"
+                      checked={maintainAspectRatio}
+                      onCheckedChange={setMaintainAspectRatio}
+                    />
+                    <Label htmlFor="maintain-aspect-ratio">
+                      Maintain aspect ratio
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="do-not-enlarge"
+                      checked={doNotEnlarge}
+                      onCheckedChange={setDoNotEnlarge}
+                    />
+                    <Label htmlFor="do-not-enlarge">
+                      Do not enlarge if smaller
+                    </Label>
+                  </div>
                 </div>
 
                 {!user?.isPremium && files.length > 1 && (

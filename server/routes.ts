@@ -347,14 +347,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/resize-image', upload.array('images', 40), async (req, res) => {
     try {
+      console.log('Received resize request:', req.body);
+      console.log('Received files:', req.files);
+
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
+        console.log('No files received in request');
         return res.status(400).json({ message: 'No files uploaded' });
       }
 
       const userId = req.user?.id;
-      const { width, height, maintainAspectRatio } = req.body;
+      const { 
+        resizeMode, 
+        width, 
+        height, 
+        percentage, 
+        maintainAspectRatio, 
+        doNotEnlarge 
+      } = req.body;
 
+      console.log('Resize parameters:', { resizeMode, width, height, percentage, maintainAspectRatio, doNotEnlarge });
+
+      // Check premium limits for batch processing
       if (!req.user?.isPremium && files.length > 1) {
         return res.status(403).json({ message: 'Batch processing requires Premium subscription' });
       }
@@ -363,8 +377,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const file of files) {
         const originalSize = file.size;
-        const outputPath = `processed/${crypto.randomUUID()}.jpg`;
-
+        
+        // Create job record first
+        console.log('Creating resize job for file:', file.originalname);
         const job = await storage.createImageJob({
           userId: userId || null,
           toolType: 'resize',
@@ -372,34 +387,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
           originalSize,
           status: 'processing',
         });
+        console.log('Created job with ID:', job.id);
+
+        const fileExtension = path.extname(file.originalname) || '.jpg';
+        const outputFileName = `job_${job.id}_${crypto.randomUUID()}${fileExtension}`;
+        const outputPath = `processed/${outputFileName}`;
 
         try {
+          let sharpInstance = sharp(file.path);
+          const metadata = await sharpInstance.metadata();
+          
           let resizeOptions: any = {};
 
-          if (maintainAspectRatio === 'true') {
-            resizeOptions = { width: parseInt(width), height: parseInt(height), fit: 'inside' };
+          if (resizeMode === 'percentage') {
+            // Resize by percentage
+            const scale = parseFloat(percentage) / 100;
+            const newWidth = Math.round((metadata.width || 0) * scale);
+            const newHeight = Math.round((metadata.height || 0) * scale);
+            
+            // Check "do not enlarge" option
+            if (doNotEnlarge === 'true' && scale > 1) {
+              // Don't resize if it would make the image larger
+              resizeOptions = {};
+            } else {
+              resizeOptions = { 
+                width: newWidth, 
+                height: newHeight,
+                fit: maintainAspectRatio === 'true' ? 'inside' : 'fill'
+              };
+            }
           } else {
-            resizeOptions = { width: parseInt(width), height: parseInt(height), fit: 'fill' };
+            // Resize by pixels
+            const targetWidth = parseInt(width);
+            const targetHeight = parseInt(height);
+            
+            // Check "do not enlarge" option
+            if (doNotEnlarge === 'true') {
+              const currentWidth = metadata.width || 0;
+              const currentHeight = metadata.height || 0;
+              
+              if (targetWidth > currentWidth || targetHeight > currentHeight) {
+                // Don't resize if target is larger than current
+                resizeOptions = {};
+              } else {
+                resizeOptions = {
+                  width: targetWidth,
+                  height: targetHeight,
+                  fit: maintainAspectRatio === 'true' ? 'inside' : 'fill'
+                };
+              }
+            } else {
+              resizeOptions = {
+                width: targetWidth,
+                height: targetHeight,
+                fit: maintainAspectRatio === 'true' ? 'inside' : 'fill'
+              };
+            }
           }
 
-          const processedBuffer = await sharp(file.path)
-            .resize(resizeOptions)
-            .jpeg({ quality: 90 })
-            .toBuffer();
+          // Apply resize if options are set
+          if (Object.keys(resizeOptions).length > 0) {
+            sharpInstance = sharpInstance.resize(resizeOptions);
+          }
 
-          await fs.mkdir(path.dirname(outputPath), { recursive: true });
+          // Maintain original format and quality
+          let processedBuffer: Buffer;
+          if (file.mimetype.includes('png')) {
+            processedBuffer = await sharpInstance.png({ quality: 90 }).toBuffer();
+          } else if (file.mimetype.includes('webp')) {
+            processedBuffer = await sharpInstance.webp({ quality: 90 }).toBuffer();
+          } else {
+            processedBuffer = await sharpInstance.jpeg({ quality: 90 }).toBuffer();
+          }
+
+          // Ensure processed directory exists and save file
+          await fs.mkdir('processed', { recursive: true });
           await fs.writeFile(outputPath, processedBuffer);
 
           const processedSize = processedBuffer.length;
+          const sizeChange = ((originalSize - processedSize) / originalSize) * 100;
 
+          // Generate download token like compression
+          const downloadToken = crypto.randomBytes(32).toString('hex');
+          const downloadUrl = `/download/${downloadToken}/${job.id}`;
+
+          console.log('Generated download token:', downloadToken);
+          console.log('Job ID:', job.id);
+          console.log('Download URL:', downloadUrl);
+
+          // Update job with results
           const completedJob = await storage.updateImageJob(job.id, {
             processedSize,
+            compressionRatio: sizeChange,
             status: 'completed',
-            downloadUrl: `/api/download/${job.id}`,
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            filePath: outputFileName,
+            downloadToken,
+            downloadUrl,
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
           });
 
+          console.log('Updated resize job:', completedJob);
           results.push(completedJob);
+
+          // Clean up uploaded file
           await fs.unlink(file.path);
 
         } catch (error) {
@@ -408,6 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      console.log('Sending resize response with jobs:', results);
       res.json({ jobs: results });
     } catch (error) {
       console.error('Resize image error:', error);
