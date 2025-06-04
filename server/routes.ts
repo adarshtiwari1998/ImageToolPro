@@ -363,7 +363,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         height, 
         percentage, 
         maintainAspectRatio, 
-        doNotEnlarge 
+        doNotEnlarge,
+        preserveQuality 
       } = req.body;
 
       console.log('Resize parameters:', { resizeMode, width, height, percentage, maintainAspectRatio, doNotEnlarge });
@@ -450,14 +451,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
             sharpInstance = sharpInstance.resize(resizeOptions);
           }
 
-          // Maintain original format and quality
+          // Handle quality preservation based on user preference
+          const useHighQuality = preserveQuality === 'true';
           let processedBuffer: Buffer;
+          
           if (file.mimetype.includes('png')) {
-            processedBuffer = await sharpInstance.png({ quality: 90 }).toBuffer();
+            processedBuffer = await sharpInstance
+              .png({ 
+                quality: useHighQuality ? 95 : 85,
+                compressionLevel: useHighQuality ? 6 : 9,
+                progressive: false
+              })
+              .toBuffer();
           } else if (file.mimetype.includes('webp')) {
-            processedBuffer = await sharpInstance.webp({ quality: 90 }).toBuffer();
+            processedBuffer = await sharpInstance
+              .webp({ 
+                quality: useHighQuality ? 95 : 85,
+                effort: useHighQuality ? 4 : 6,
+                smartSubsample: !useHighQuality
+              })
+              .toBuffer();
           } else {
-            processedBuffer = await sharpInstance.jpeg({ quality: 90 }).toBuffer();
+            // For JPEG, adjust quality based on user preference
+            if (useHighQuality) {
+              processedBuffer = await sharpInstance
+                .jpeg({ 
+                  quality: 95,
+                  progressive: false,
+                  mozjpeg: false,
+                  optimizeScans: false,
+                  optimizeCoding: false
+                })
+                .toBuffer();
+            } else {
+              processedBuffer = await sharpInstance
+                .jpeg({ 
+                  quality: 85,
+                  progressive: true,
+                  mozjpeg: true,
+                  optimizeScans: true,
+                  optimizeCoding: true
+                })
+                .toBuffer();
+            }
           }
 
           // Ensure processed directory exists and save file

@@ -26,6 +26,7 @@ export default function ResizeImage() {
   const [percentage, setPercentage] = useState("100");
   const [maintainAspectRatio, setMaintainAspectRatio] = useState(true);
   const [doNotEnlarge, setDoNotEnlarge] = useState(false);
+  const [preserveQuality, setPreserveQuality] = useState(false);
   const [results, setResults] = useState(null);
 
   const resizeMutation = useMutation({
@@ -36,19 +37,19 @@ export default function ResizeImage() {
     },
     onSuccess: (data) => {
       console.log('Resize success, received data:', data);
-      
+
       // Get the first completed job
       const completedJob = data.jobs && data.jobs.length > 0 ? data.jobs[0] : null;
-      
+
       if (completedJob && completedJob.status === 'completed' && completedJob.downloadToken && completedJob.id) {
         // Show success message
         toast({
           title: "Resize Complete!",
           description: "Redirecting to download page...",
         });
-        
+
         console.log('Redirecting to:', `/download/${completedJob.downloadToken}/${completedJob.id}`);
-        
+
         // Use wouter's setLocation for navigation
         setTimeout(() => {
           setLocation(`/download/${completedJob.downloadToken}/${completedJob.id}`);
@@ -79,7 +80,7 @@ export default function ResizeImage() {
     files.forEach((file) => {
       formData.append('images', file);
     });
-    
+
     formData.append('resizeMode', resizeMode);
     if (resizeMode === 'pixels') {
       formData.append('width', width);
@@ -89,6 +90,7 @@ export default function ResizeImage() {
     }
     formData.append('maintainAspectRatio', maintainAspectRatio.toString());
     formData.append('doNotEnlarge', doNotEnlarge.toString());
+    formData.append('preserveQuality', preserveQuality.toString());
 
     resizeMutation.mutate(formData);
   };
@@ -128,7 +130,7 @@ export default function ResizeImage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tool Header */}
         <div className="text-center mb-12">
@@ -294,7 +296,7 @@ export default function ResizeImage() {
                   </div>
                 )}
 
-                {/* Options */}
+                {/* Advanced Options */}
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -306,7 +308,7 @@ export default function ResizeImage() {
                       Maintain aspect ratio
                     </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="do-not-enlarge"
@@ -316,6 +318,15 @@ export default function ResizeImage() {
                     <Label htmlFor="do-not-enlarge">
                       Do not enlarge if smaller
                     </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="preserveQuality"
+                      checked={preserveQuality}
+                      onCheckedChange={setPreserveQuality}
+                    />
+                    <Label htmlFor="preserveQuality">Preserve image quality (larger file size)</Label>
                   </div>
                 </div>
 
