@@ -69,9 +69,19 @@ export default function DownloadPage() {
       link.click();
       document.body.removeChild(link);
 
+      const getDownloadMessage = () => {
+        switch (job?.toolType) {
+          case 'compress': return "Your compressed image is downloading...";
+          case 'resize': return "Your resized image is downloading...";
+          case 'crop': return "Your cropped image is downloading...";
+          case 'convert': return "Your converted image is downloading...";
+          default: return "Your processed image is downloading...";
+        }
+      };
+
       toast({
         title: "Download Started",
-        description: "Your compressed image is downloading...",
+        description: getDownloadMessage(),
       });
     } catch (error) {
       toast({
@@ -85,7 +95,16 @@ export default function DownloadPage() {
   };
 
   const handleProcessMore = () => {
-    window.location.href = '/compress-image';
+    const getToolUrl = () => {
+      switch (job?.toolType) {
+        case 'compress': return '/compress-image';
+        case 'resize': return '/resize-image';
+        case 'crop': return '/crop-image';
+        case 'convert': return '/convert-to-jpg';
+        default: return '/compress-image';
+      }
+    };
+    window.location.href = getToolUrl();
   };
 
   return (
@@ -98,10 +117,18 @@ export default function DownloadPage() {
             <i className="fas fa-check text-2xl text-green-600"></i>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Compression Complete!
+            {job?.toolType === 'compress' && 'Compression Complete!'}
+            {job?.toolType === 'resize' && 'Resize Complete!'}
+            {job?.toolType === 'crop' && 'Crop Complete!'}
+            {job?.toolType === 'convert' && 'Conversion Complete!'}
+            {!job?.toolType && 'Processing Complete!'}
           </h1>
           <p className="text-gray-600">
-            Your image has been compressed successfully
+            {job?.toolType === 'compress' && 'Your image has been compressed successfully'}
+            {job?.toolType === 'resize' && 'Your image has been resized successfully'}
+            {job?.toolType === 'crop' && 'Your image has been cropped successfully'}
+            {job?.toolType === 'convert' && 'Your image has been converted successfully'}
+            {!job?.toolType && 'Your image has been processed successfully'}
           </p>
         </div>
 
@@ -117,9 +144,19 @@ export default function DownloadPage() {
                   <span className="block">
                     {((job.originalSize || 0) / 1024 / 1024).toFixed(2)} MB → {((job.processedSize || 0) / 1024 / 1024).toFixed(2)} MB
                   </span>
-                  {job.compressionRatio && (
+                  {job.compressionRatio && job.toolType === 'compress' && (
                     <span className="text-green-600 font-medium">
                       -{Math.abs(job.compressionRatio).toFixed(1)}% smaller
+                    </span>
+                  )}
+                  {job.compressionRatio && job.toolType === 'resize' && job.compressionRatio > 0 && (
+                    <span className="text-blue-600 font-medium">
+                      {Math.abs(job.compressionRatio).toFixed(1)}% size reduction
+                    </span>
+                  )}
+                  {job.compressionRatio && job.toolType === 'resize' && job.compressionRatio < 0 && (
+                    <span className="text-orange-600 font-medium">
+                      {Math.abs(job.compressionRatio).toFixed(1)}% size increase
                     </span>
                   )}
                 </div>
@@ -168,7 +205,11 @@ export default function DownloadPage() {
                 className="w-full"
               >
                 <i className="fas fa-plus mr-2"></i>
-                Compress More Images
+                {job?.toolType === 'compress' && 'Compress More Images'}
+                {job?.toolType === 'resize' && 'Resize More Images'}
+                {job?.toolType === 'crop' && 'Crop More Images'}
+                {job?.toolType === 'convert' && 'Convert More Images'}
+                {!job?.toolType && 'Process More Images'}
               </Button>
             </div>
 
