@@ -560,7 +560,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await fs.access(actualFilePath);
         
         // Set proper headers for automatic download like iLoveImg
-        const downloadFileName = `compressed_${job.fileName}`;
+        const getDownloadPrefix = (toolType: string) => {
+          switch (toolType) {
+            case 'compress': return 'compressed_';
+            case 'resize': return 'resized_';
+            case 'crop': return 'cropped_';
+            case 'convert': return 'converted_';
+            default: return 'processed_';
+          }
+        };
+        
+        const downloadFileName = `${getDownloadPrefix(job.toolType)}${job.fileName}`;
         const stats = await fs.stat(actualFilePath);
         
         res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
