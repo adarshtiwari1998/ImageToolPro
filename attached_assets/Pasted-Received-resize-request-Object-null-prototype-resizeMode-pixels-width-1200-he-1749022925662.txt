@@ -1,0 +1,66 @@
+Received resize request: [Object: null prototype] {
+  resizeMode: 'pixels',
+  width: '1200',
+  height: '630',
+  maintainAspectRatio: 'true',
+  doNotEnlarge: 'false'
+}
+Received files: [
+  {
+    fieldname: 'images',
+    originalname: 'IMG_0978 (1).jpg',
+    encoding: '7bit',
+    mimetype: 'image/jpeg',
+    destination: 'uploads/',
+    filename: '8f7aac0c116c72d6af18db93695cd841',
+    path: 'uploads/8f7aac0c116c72d6af18db93695cd841',
+    size: 434406
+  }
+]
+Resize parameters: {
+  resizeMode: 'pixels',
+  width: '1200',
+  height: '630',
+  percentage: undefined,
+  maintainAspectRatio: 'true',
+  doNotEnlarge: 'false'
+}
+Creating resize job for file: IMG_0978 (1).jpg
+Created job with ID: 27
+Generated download token: e0c9ba721bcfe04dba38303c5bf16531c588d550155565b632757948734c2b82
+Job ID: 27
+Download URL: /download/e0c9ba721bcfe04dba38303c5bf16531c588d550155565b632757948734c2b82/27
+Updated resize job: {
+  id: 27,
+  userId: null,
+  toolType: 'resize',
+  fileName: 'IMG_0978 (1).jpg',
+  originalSize: 434406,
+  processedSize: 38461,
+  compressionRatio: 91.1463,
+  processingTime: null,
+  status: 'completed',
+  downloadUrl: '/download/e0c9ba721bcfe04dba38303c5bf16531c588d550155565b632757948734c2b82/27',
+  downloadToken: 'e0c9ba721bcfe04dba38303c5bf16531c588d550155565b632757948734c2b82',
+  filePath: 'job_27_4fb48f4b-22cf-48c9-943b-b9f921419996.jpg',
+  expiresAt: 2025-06-05T07:40:13.511Z,
+  createdAt: 2025-06-04T07:40:13.322Z
+}
+Sending resize response with jobs: [
+  {
+    id: 27,
+    userId: null,
+    toolType: 'resize',
+    fileName: 'IMG_0978 (1).jpg',
+    originalSize: 434406,
+    processedSize: 38461,
+    compressionRatio: 91.1463,
+    processingTime: null,
+    status: 'completed',
+    downloadUrl: '/download/e0c9ba721bcfe04dba38303c5bf16531c588d550155565b632757948734c2b82/27',
+    downloadToken: 'e0c9ba721bcfe04dba38303c5bf16531c588d550155565b632757948734c2b82',
+    filePath: 'job_27_4fb48f4b-22cf-48c9-943b-b9f921419996.jpg',
+    expiresAt: 2025-06-05T07:40:13.511Z,
+    createdAt: 2025-06-04T07:40:13.322Z
+  }
+]
